@@ -1,0 +1,315 @@
+{
+  "description": "Target journals for high-quality conservation and biodiversity research",
+  "version": "1.0.0",
+  "lastUpdated": "2025-10-19",
+
+  "tier_1_conservation": [
+    {
+      "name": "Conservation Biology",
+      "issn": "0888-8892",
+      "e_issn": "1523-1739",
+      "publisher": "Wiley",
+      "impact_factor": 6.3,
+      "scope": "Primary conservation journal, broad coverage"
+    },
+    {
+      "name": "Biological Conservation",
+      "issn": "0006-3207",
+      "publisher": "Elsevier",
+      "impact_factor": 5.9,
+      "scope": "Conservation biology, biodiversity, endangered species"
+    },
+    {
+      "name": "Conservation Letters",
+      "issn": "1755-263X",
+      "publisher": "Wiley",
+      "impact_factor": 7.7,
+      "scope": "Short format, high-impact conservation research"
+    },
+    {
+      "name": "Animal Conservation",
+      "issn": "1367-9430",
+      "e_issn": "1469-1795",
+      "publisher": "Wiley",
+      "impact_factor": 3.1,
+      "scope": "Wildlife conservation, zoological research"
+    },
+    {
+      "name": "Biodiversity and Conservation",
+      "issn": "0960-3115",
+      "e_issn": "1572-9710",
+      "publisher": "Springer",
+      "impact_factor": 3.4,
+      "scope": "Biodiversity science and conservation"
+    }
+  ],
+
+  "tier_1_general_ecology": [
+    {
+      "name": "Nature",
+      "issn": "0028-0836",
+      "e_issn": "1476-4687",
+      "publisher": "Nature Publishing Group",
+      "impact_factor": 69.5,
+      "scope": "Multidisciplinary, includes high-impact conservation papers"
+    },
+    {
+      "name": "Science",
+      "issn": "0036-8075",
+      "e_issn": "1095-9203",
+      "publisher": "AAAS",
+      "impact_factor": 63.8,
+      "scope": "Multidisciplinary, includes conservation and climate"
+    },
+    {
+      "name": "PNAS",
+      "issn": "0027-8424",
+      "e_issn": "1091-6490",
+      "publisher": "National Academy of Sciences",
+      "impact_factor": 11.1,
+      "scope": "Multidisciplinary, strong ecology and conservation"
+    },
+    {
+      "name": "Nature Ecology & Evolution",
+      "issn": "2041-210X",
+      "publisher": "Nature Publishing Group",
+      "impact_factor": 13.9,
+      "scope": "Ecology, evolution, conservation, biodiversity"
+    },
+    {
+      "name": "Ecology Letters",
+      "issn": "1461-023X",
+      "e_issn": "1461-0248",
+      "publisher": "Wiley",
+      "impact_factor": 8.8,
+      "scope": "High-impact ecology and conservation"
+    },
+    {
+      "name": "Trends in Ecology & Evolution",
+      "issn": "0169-5347",
+      "publisher": "Elsevier",
+      "impact_factor": 15.3,
+      "scope": "Reviews in ecology and conservation"
+    }
+  ],
+
+  "tier_2_specialized": [
+    {
+      "name": "Journal of Applied Ecology",
+      "issn": "0021-8901",
+      "e_issn": "1365-2664",
+      "publisher": "Wiley",
+      "impact_factor": 5.8,
+      "scope": "Applied ecology and conservation management"
+    },
+    {
+      "name": "Global Change Biology",
+      "issn": "1354-1013",
+      "e_issn": "1365-2486",
+      "publisher": "Wiley",
+      "impact_factor": 11.6,
+      "scope": "Climate change and biodiversity"
+    },
+    {
+      "name": "Diversity and Distributions",
+      "issn": "1366-9516",
+      "e_issn": "1472-4642",
+      "publisher": "Wiley",
+      "impact_factor": 4.6,
+      "scope": "Biogeography and conservation"
+    },
+    {
+      "name": "Ecological Applications",
+      "issn": "1051-0761",
+      "e_issn": "1939-5582",
+      "publisher": "Wiley",
+      "impact_factor": 4.3,
+      "scope": "Applied ecology for conservation"
+    },
+    {
+      "name": "Oryx",
+      "issn": "0030-6053",
+      "e_issn": "1365-3008",
+      "publisher": "Cambridge University Press",
+      "impact_factor": 2.5,
+      "scope": "Endangered species and conservation practice"
+    },
+    {
+      "name": "Conservation Science and Practice",
+      "issn": "2578-4854",
+      "publisher": "Wiley",
+      "impact_factor": 2.9,
+      "scope": "Evidence-based conservation practice"
+    }
+  ],
+
+  "marine_coastal": [
+    {
+      "name": "Marine Ecology Progress Series",
+      "issn": "0171-8630",
+      "e_issn": "1616-1599",
+      "publisher": "Inter-Research",
+      "impact_factor": 2.5,
+      "scope": "Marine ecology and conservation"
+    },
+    {
+      "name": "Coral Reefs",
+      "issn": "0722-4028",
+      "e_issn": "1432-0975",
+      "publisher": "Springer",
+      "impact_factor": 3.5,
+      "scope": "Coral reef ecology and conservation"
+    },
+    {
+      "name": "Aquatic Conservation",
+      "issn": "1052-7613",
+      "e_issn": "1099-0755",
+      "publisher": "Wiley",
+      "impact_factor": 2.8,
+      "scope": "Freshwater and marine conservation"
+    },
+    {
+      "name": "Marine Policy",
+      "issn": "0308-597X",
+      "publisher": "Elsevier",
+      "impact_factor": 3.8,
+      "scope": "Ocean policy and governance"
+    }
+  ],
+
+  "forest_terrestrial": [
+    {
+      "name": "Forest Ecology and Management",
+      "issn": "0378-1127",
+      "publisher": "Elsevier",
+      "impact_factor": 3.7,
+      "scope": "Forest conservation and management"
+    },
+    {
+      "name": "Restoration Ecology",
+      "issn": "1061-2971",
+      "e_issn": "1526-100X",
+      "publisher": "Wiley",
+      "impact_factor": 2.9,
+      "scope": "Ecological restoration"
+    },
+    {
+      "name": "Landscape Ecology",
+      "issn": "0921-2973",
+      "e_issn": "1572-9761",
+      "publisher": "Springer",
+      "impact_factor": 4.8,
+      "scope": "Landscape-level conservation"
+    }
+  ],
+
+  "policy_social": [
+    {
+      "name": "Environmental Science & Policy",
+      "issn": "1462-9011",
+      "publisher": "Elsevier",
+      "impact_factor": 5.4,
+      "scope": "Environmental policy and governance"
+    },
+    {
+      "name": "Global Environmental Change",
+      "issn": "0959-3780",
+      "publisher": "Elsevier",
+      "impact_factor": 11.8,
+      "scope": "Global environmental change and policy"
+    },
+    {
+      "name": "Ecosystem Services",
+      "issn": "2212-0416",
+      "publisher": "Elsevier",
+      "impact_factor": 6.1,
+      "scope": "Ecosystem services and conservation"
+    },
+    {
+      "name": "People and Nature",
+      "issn": "2575-8314",
+      "publisher": "Wiley",
+      "impact_factor": 4.5,
+      "scope": "Human-nature connections and conservation"
+    }
+  ],
+
+  "climate_sustainability": [
+    {
+      "name": "Nature Climate Change",
+      "issn": "1758-678X",
+      "e_issn": "1758-6798",
+      "publisher": "Nature Publishing Group",
+      "impact_factor": 30.7,
+      "scope": "Climate change impacts on biodiversity"
+    },
+    {
+      "name": "Nature Sustainability",
+      "issn": "2398-9629",
+      "publisher": "Nature Publishing Group",
+      "impact_factor": 27.5,
+      "scope": "Sustainability science including conservation"
+    },
+    {
+      "name": "One Earth",
+      "issn": "2590-3322",
+      "publisher": "Cell Press",
+      "impact_factor": 16.2,
+      "scope": "Sustainability, climate, and biodiversity"
+    }
+  ],
+
+  "open_access": [
+    {
+      "name": "PLOS ONE",
+      "issn": "1932-6203",
+      "publisher": "PLOS",
+      "impact_factor": 3.7,
+      "scope": "Multidisciplinary, large volume, includes conservation"
+    },
+    {
+      "name": "Frontiers in Ecology and Evolution",
+      "issn": "2296-701X",
+      "publisher": "Frontiers Media",
+      "impact_factor": 3.0,
+      "scope": "Open access ecology and evolution"
+    },
+    {
+      "name": "Ecology and Evolution",
+      "issn": "2045-7758",
+      "publisher": "Wiley",
+      "impact_factor": 2.3,
+      "scope": "Open access ecology research"
+    }
+  ],
+
+  "search_strategy": {
+    "description": "How to use this journal list for CrossRef searches",
+    "approaches": {
+      "issn_filter": {
+        "method": "Use ISSN to filter CrossRef results",
+        "crossref_param": "filter=issn:0888-8892",
+        "pros": "High precision, guaranteed journal match",
+        "cons": "More API calls required (one per journal)"
+      },
+      "journal_name_filter": {
+        "method": "Use journal name in CrossRef container-title filter",
+        "crossref_param": "filter=container-title:Conservation Biology",
+        "pros": "Easier to implement, single query",
+        "cons": "May miss variations in journal name"
+      },
+      "hybrid": {
+        "method": "Use keyword search + journal verification",
+        "description": "Search by keywords, then verify results are from target journals",
+        "recommended": true
+      }
+    }
+  },
+
+  "usage_notes": {
+    "tier_1_priority": "Start with tier 1 journals for highest quality papers",
+    "specialized_searches": "Use specialized journal lists for ecosystem-specific searches",
+    "open_access_note": "Open access journals may have more accessible full text",
+    "update_frequency": "Update impact factors and journal lists annually"
+  }
+}

@@ -1,0 +1,697 @@
+{
+  "description": "IMPROVED: Comprehensive conservation/environment queries with reduced false positives",
+  "version": "2.0.0",
+  "lastUpdated": "2025-10-23",
+  "improvements": [
+    "Removed generic 'CBD' queries that match cannabidiol/central business district",
+    "Made all framework queries more specific with 'biodiversity' context",
+    "Added comprehensive environmental science categories",
+    "Kept all Traditional Ecological Knowledge (TEK) queries - 30 queries",
+    "Added marine, freshwater, and terrestrial specificity",
+    "Added conservation technology and monitoring methods",
+    "Added species diversity across all taxa (plants, marine, freshwater, invertebrates, microbes)",
+    "Added protected areas, ethnobotany, conservation genetics, social science, One Health",
+    "Added landscape ecology, additional threats, and conservation behavior ecology",
+    "Total: 508 targeted queries across 36 categories vs 299 generic queries (v1)"
+  ],
+
+  "authors": [
+    "troy sternberg"
+  ],
+
+  "frameworks": [
+    "Aichi Biodiversity Targets",
+    "Kunming-Montreal Global Biodiversity Framework",
+    "Convention on Biological Diversity biodiversity targets",
+    "post-2020 biodiversity framework",
+    "Sustainable Development Goal 14 life below water",
+    "Sustainable Development Goal 15 life on land",
+    "Sustainable Development Goal 13 climate action biodiversity",
+    "Paris Agreement biodiversity conservation",
+    "IPBES biodiversity assessment",
+    "30x30 biodiversity target",
+    "protected area management biodiversity",
+    "IUCN Red List threatened species",
+    "CITES endangered species",
+    "Ramsar Convention wetlands",
+    "World Heritage biodiversity",
+    "Bonn Convention migratory species",
+    "UNCCD land degradation biodiversity"
+  ],
+
+  "ecosystems": [
+    "coral reef conservation",
+    "tropical forest biodiversity",
+    "rainforest conservation",
+    "mangrove ecosystem conservation",
+    "wetland biodiversity",
+    "grassland conservation",
+    "savanna ecology",
+    "alpine biodiversity",
+    "mountain ecosystem conservation",
+    "freshwater biodiversity",
+    "river ecosystem conservation",
+    "lake biodiversity",
+    "marine protected area",
+    "coastal biodiversity conservation",
+    "temperate forest conservation",
+    "boreal forest biodiversity",
+    "desert biodiversity conservation",
+    "arid ecosystem conservation",
+    "urban biodiversity conservation",
+    "agricultural biodiversity conservation",
+    "peatland conservation",
+    "seagrass ecosystem conservation",
+    "kelp forest conservation",
+    "tundra biodiversity",
+    "polar ecosystem conservation",
+    "estuary biodiversity",
+    "rocky shore biodiversity",
+    "sandy beach ecosystem",
+    "cave biodiversity",
+    "underground ecosystem"
+  ],
+
+  "conservation_methods": [
+    "conservation genetics",
+    "population viability analysis",
+    "habitat restoration ecology",
+    "ecological restoration",
+    "rewilding conservation",
+    "species reintroduction",
+    "conservation planning",
+    "systematic conservation planning",
+    "biodiversity monitoring",
+    "camera trap wildlife survey",
+    "acoustic monitoring biodiversity",
+    "environmental DNA biodiversity",
+    "eDNA metabarcoding",
+    "conservation prioritization",
+    "protected area effectiveness",
+    "wildlife corridor connectivity",
+    "habitat fragmentation ecology",
+    "ecological niche modeling",
+    "species distribution model conservation",
+    "conservation biogeography",
+    "radio telemetry wildlife",
+    "GPS tracking wildlife",
+    "mark-recapture wildlife",
+    "occupancy modeling biodiversity",
+    "citizen science biodiversity monitoring"
+  ],
+
+  "climate_biodiversity": [
+    "climate change biodiversity loss",
+    "climate adaptation species conservation",
+    "climate refugia biodiversity",
+    "species range shift climate",
+    "phenological shift climate change",
+    "ocean acidification coral reef",
+    "climate velocity biodiversity",
+    "assisted migration conservation",
+    "nature-based climate solutions",
+    "ecosystem-based adaptation climate",
+    "blue carbon mangrove seagrass",
+    "carbon sequestration forest conservation",
+    "climate resilience ecosystem",
+    "drought impact biodiversity",
+    "sea level rise coastal biodiversity",
+    "permafrost thaw biodiversity",
+    "coral bleaching climate change"
+  ],
+
+  "conservation_general": [
+    "biodiversity conservation",
+    "species conservation",
+    "endangered species protection",
+    "threatened species recovery",
+    "wildlife conservation",
+    "conservation biology",
+    "conservation science",
+    "biological conservation",
+    "habitat conservation",
+    "ecosystem services biodiversity",
+    "conservation effectiveness",
+    "conservation outcomes measurement",
+    "conservation impact evaluation",
+    "evidence-based conservation",
+    "protected area biodiversity",
+    "nature reserve management",
+    "conservation policy",
+    "conservation management",
+    "biodiversity hotspot conservation",
+    "extinction risk assessment"
+  ],
+
+  "sustainability": [
+    "sustainable development biodiversity",
+    "sustainable agriculture biodiversity",
+    "sustainable fisheries management",
+    "sustainable forestry conservation",
+    "agroecology biodiversity",
+    "sustainable land management biodiversity",
+    "ecosystem-based fisheries management",
+    "integrated landscape management conservation",
+    "nature positive",
+    "biodiversity offsetting conservation",
+    "no net loss biodiversity",
+    "regenerative agriculture biodiversity",
+    "organic farming biodiversity",
+    "permaculture biodiversity"
+  ],
+
+  "countries_regions": [
+    "Amazon rainforest biodiversity conservation",
+    "Atlantic Forest Brazil biodiversity",
+    "Cerrado conservation",
+    "Congo Basin rainforest biodiversity",
+    "East African savanna conservation",
+    "Southeast Asian rainforest conservation",
+    "Sundaland biodiversity hotspot",
+    "Wallacea biodiversity",
+    "Mediterranean biodiversity hotspot",
+    "Caribbean Islands coral reef conservation",
+    "Himalayas biodiversity conservation",
+    "Western Ghats India biodiversity",
+    "Indo-Burma biodiversity hotspot",
+    "Galapagos Islands conservation",
+    "Madagascar biodiversity conservation",
+    "Borneo rainforest conservation",
+    "Sumatra biodiversity conservation",
+    "Costa Rica biodiversity",
+    "Great Barrier Reef conservation",
+    "Coral Triangle biodiversity",
+    "Arctic tundra biodiversity",
+    "Antarctic ecosystem conservation",
+    "Patagonia conservation",
+    "Andes mountains biodiversity",
+    "Mesoamerican reef conservation",
+    "Brazilian Pantanal wetland",
+    "Okavango Delta biodiversity",
+    "Serengeti ecosystem conservation",
+    "Yellowstone ecosystem",
+    "Great Lakes North America biodiversity"
+  ],
+
+  "taxonomic_groups": [
+    "mammal conservation",
+    "bird biodiversity conservation",
+    "reptile conservation",
+    "amphibian conservation threatened",
+    "fish biodiversity conservation",
+    "insect biodiversity conservation",
+    "pollinator conservation",
+    "primate conservation",
+    "cetacean whale dolphin conservation",
+    "marine mammal conservation",
+    "coral reef organism conservation",
+    "freshwater fish conservation",
+    "migratory bird conservation",
+    "endemic species conservation",
+    "keystone species conservation",
+    "carnivore conservation ecology",
+    "herbivore ecology biodiversity",
+    "ungulate conservation",
+    "bat conservation",
+    "seabird conservation",
+    "raptor bird of prey conservation",
+    "waterbird wetland conservation",
+    "songbird conservation",
+    "sea turtle conservation",
+    "crocodilian alligator conservation",
+    "salamander amphibian conservation",
+    "invertebrate biodiversity conservation",
+    "bryophyte moss conservation",
+    "lichen biodiversity",
+    "fungal diversity conservation"
+  ],
+
+  "iconic_threatened_species": [
+    "tiger Panthera tigris conservation",
+    "elephant African Asian conservation",
+    "rhinoceros conservation critically endangered",
+    "polar bear Ursus maritimus climate",
+    "giant panda Ailuropoda melanoleuca",
+    "orangutan Pongo conservation",
+    "gorilla conservation endangered",
+    "chimpanzee Pan troglodytes conservation",
+    "lemur Madagascar conservation",
+    "sea turtle marine conservation",
+    "whale conservation cetacean",
+    "shark conservation endangered",
+    "dolphin conservation",
+    "penguin conservation Antarctic",
+    "lion Panthera leo conservation",
+    "leopard Panthera pardus conservation",
+    "jaguar Panthera onca conservation",
+    "snow leopard Panthera uncia",
+    "cheetah Acinonyx jubatus conservation",
+    "wolf Canis lupus conservation",
+    "grizzly bear Ursus arctos",
+    "amphibian decline conservation",
+    "butterfly Lepidoptera conservation",
+    "bee pollinator conservation",
+    "monarch butterfly Danaus plexippus"
+  ],
+
+  "threats": [
+    "deforestation biodiversity loss",
+    "habitat loss species extinction",
+    "poaching wildlife illegal",
+    "illegal wildlife trade trafficking",
+    "invasive alien species impact",
+    "pollution biodiversity impact",
+    "overfishing marine biodiversity",
+    "overexploitation species",
+    "mining impact biodiversity",
+    "agricultural expansion biodiversity loss",
+    "urbanization biodiversity impact",
+    "infrastructure development biodiversity",
+    "forest fragmentation biodiversity",
+    "land degradation biodiversity",
+    "desertification biodiversity",
+    "bushmeat hunting wildlife",
+    "human-wildlife conflict",
+    "wildlife disease conservation",
+    "pesticide impact biodiversity",
+    "plastic pollution marine wildlife",
+    "oil spill marine biodiversity",
+    "dam impact river biodiversity",
+    "logging impact forest biodiversity"
+  ],
+
+  "conservation_interventions": [
+    "community-based conservation management",
+    "indigenous-led conservation",
+    "ecotourism wildlife conservation",
+    "conservation finance biodiversity",
+    "payment for ecosystem services",
+    "REDD+ forest conservation",
+    "wildlife corridor establishment",
+    "transboundary protected area",
+    "ex-situ conservation zoo",
+    "captive breeding endangered species",
+    "translocation species conservation",
+    "seed bank plant conservation",
+    "conservation easement land",
+    "wildlife management area",
+    "conservation concession",
+    "debt-for-nature swap",
+    "biodiversity credit market",
+    "habitat banking mitigation",
+    "species recovery program",
+    "reforestation biodiversity"
+  ],
+
+  "traditional_ecological_knowledge": [
+    "traditional ecological knowledge conservation",
+    "TEK indigenous biodiversity",
+    "indigenous knowledge conservation practices",
+    "local ecological knowledge biodiversity",
+    "traditional knowledge systems conservation",
+    "indigenous peoples conservation biodiversity",
+    "indigenous land management conservation",
+    "traditional resource management biodiversity",
+    "indigenous protected areas",
+    "indigenous conservation areas ICCA",
+    "traditional fire management biodiversity",
+    "indigenous fire practices conservation",
+    "traditional hunting practices sustainable",
+    "indigenous fishing knowledge conservation",
+    "traditional agriculture biodiversity conservation",
+    "indigenous agroforestry biodiversity",
+    "sacred natural sites conservation",
+    "culturally significant species biodiversity",
+    "indigenous stewardship conservation",
+    "traditional plant knowledge ethnobotany",
+    "ethnobotany plant conservation",
+    "indigenous seed systems conservation",
+    "community conserved areas biodiversity",
+    "indigenous land rights conservation",
+    "co-management indigenous conservation",
+    "indigenous-led conservation initiatives",
+    "traditional governance systems biodiversity",
+    "indigenous languages biodiversity knowledge",
+    "biocultural diversity conservation",
+    "cultural keystone species conservation"
+  ],
+
+  "marine_conservation": [
+    "marine biodiversity conservation",
+    "ocean conservation",
+    "deep sea biodiversity",
+    "seamount ecosystem conservation",
+    "marine reserve effectiveness",
+    "marine spatial planning conservation",
+    "fisheries management biodiversity",
+    "bycatch reduction conservation",
+    "marine debris wildlife impact",
+    "underwater noise pollution marine life",
+    "seabed mining biodiversity impact",
+    "marine invasive species",
+    "ocean warming biodiversity",
+    "hypoxia dead zone marine life"
+  ],
+
+  "freshwater_conservation": [
+    "freshwater ecosystem conservation",
+    "river restoration biodiversity",
+    "lake ecosystem conservation",
+    "stream biodiversity conservation",
+    "wetland restoration",
+    "riparian zone conservation",
+    "freshwater fish diversity",
+    "aquatic invertebrate conservation",
+    "watershed management biodiversity",
+    "environmental flow conservation",
+    "dam removal river restoration",
+    "floodplain connectivity biodiversity"
+  ],
+
+  "soil_biodiversity": [
+    "soil biodiversity conservation",
+    "soil microbiome diversity",
+    "earthworm biodiversity",
+    "soil fungi conservation",
+    "soil organic matter biodiversity",
+    "soil health biodiversity",
+    "mycorrhizal fungi conservation"
+  ],
+
+  "pollination_seed_dispersal": [
+    "pollination services conservation",
+    "pollinator decline biodiversity",
+    "seed dispersal ecosystem",
+    "plant-pollinator networks",
+    "frugivore seed dispersal conservation",
+    "bat pollination conservation",
+    "bird pollination conservation",
+    "insect pollination agriculture"
+  ],
+
+  "conservation_technology": [
+    "remote sensing biodiversity monitoring",
+    "satellite imagery forest conservation",
+    "drone wildlife monitoring",
+    "bioacoustics species monitoring",
+    "camera trap biodiversity survey",
+    "artificial intelligence conservation",
+    "machine learning species identification",
+    "genomics conservation genetics",
+    "metabarcoding biodiversity assessment"
+  ],
+
+  "environmental_monitoring": [
+    "long-term ecological monitoring",
+    "biodiversity indicator species",
+    "ecosystem health assessment",
+    "biomonitoring environmental quality",
+    "biological indicator pollution",
+    "sentinel species environmental change",
+    "baseline survey biodiversity"
+  ],
+
+  "ecosystem_services": [
+    "pollination services biodiversity",
+    "water purification ecosystem services",
+    "carbon storage forest conservation",
+    "soil formation biodiversity",
+    "flood regulation wetland ecosystem",
+    "coastal protection mangrove",
+    "pest control biodiversity",
+    "nutrient cycling ecosystem"
+  ],
+
+  "restoration_ecology": [
+    "ecological restoration biodiversity",
+    "habitat restoration techniques",
+    "wetland restoration ecology",
+    "forest restoration native species",
+    "grassland restoration biodiversity",
+    "coral reef restoration",
+    "river restoration ecology",
+    "mine site restoration biodiversity",
+    "urban restoration ecology"
+  ],
+
+  "plant_diversity": [
+    "plant diversity conservation",
+    "tree species diversity",
+    "orchid conservation",
+    "fern biodiversity",
+    "grass species conservation",
+    "medicinal plant conservation",
+    "crop wild relatives conservation",
+    "endemic plant species",
+    "rare plant conservation",
+    "alpine plant biodiversity",
+    "cactus succulent conservation",
+    "palm species conservation",
+    "conifer diversity conservation"
+  ],
+
+  "marine_species_diversity": [
+    "reef fish diversity",
+    "shark ray diversity",
+    "marine invertebrate diversity",
+    "sponge biodiversity",
+    "jellyfish diversity",
+    "octopus squid conservation",
+    "lobster crab diversity",
+    "abalone sea urchin conservation",
+    "marine worm polychaete diversity",
+    "zooplankton diversity"
+  ],
+
+  "freshwater_species": [
+    "freshwater mussel conservation",
+    "crayfish diversity conservation",
+    "freshwater snail biodiversity",
+    "dragonfly damselfly conservation",
+    "mayfly diversity",
+    "caddisfly biodiversity",
+    "freshwater shrimp diversity"
+  ],
+
+  "invertebrate_diversity": [
+    "beetle Coleoptera diversity",
+    "ant Formicidae biodiversity",
+    "wasp diversity conservation",
+    "fly Diptera biodiversity",
+    "spider Araneae diversity",
+    "millipede diversity",
+    "centipede biodiversity",
+    "snail slug mollusc diversity",
+    "earthworm Oligochaeta diversity",
+    "termite biodiversity"
+  ],
+
+  "microbial_diversity": [
+    "soil microbial diversity",
+    "marine microbiome biodiversity",
+    "archaea diversity",
+    "protist diversity conservation",
+    "algae diversity conservation",
+    "cyanobacteria biodiversity",
+    "nitrogen-fixing bacteria diversity"
+  ],
+
+  "symbiotic_relationships": [
+    "mutualism symbiosis conservation",
+    "lichen symbiosis diversity",
+    "mycorrhizal symbiosis",
+    "coral zooxanthellae symbiosis",
+    "plant-microbe symbiosis",
+    "endosymbiont diversity",
+    "gut microbiome wildlife"
+  ],
+
+  "additional_vertebrates": [
+    "salamander newt diversity",
+    "frog toad anuran diversity",
+    "tortoise turtle Testudines conservation",
+    "snake serpent diversity",
+    "lizard lacertilian diversity",
+    "parrot psittacine conservation",
+    "hummingbird Trochilidae diversity",
+    "woodpecker diversity conservation",
+    "owl Strigiformes conservation",
+    "duck goose waterfowl diversity",
+    "heron egret Ardeidae conservation",
+    "salmon trout salmonid conservation",
+    "sturgeon paddlefish conservation",
+    "eel Anguilliformes conservation"
+  ],
+
+  "specific_protected_areas": [
+    "Yellowstone National Park biodiversity",
+    "Serengeti National Park wildlife",
+    "Great Barrier Reef Marine Park conservation",
+    "Kruger National Park conservation",
+    "Galapagos National Park biodiversity",
+    "Yosemite National Park ecology",
+    "Amazon rainforest protected areas",
+    "UNESCO World Heritage biodiversity",
+    "Ramsar wetland site conservation",
+    "biosphere reserve conservation",
+    "transboundary protected area conservation",
+    "indigenous conserved area ICCA"
+  ],
+
+  "ethnobotany_expanded": [
+    "ethnobotany traditional medicine",
+    "medicinal plant traditional knowledge",
+    "wild edible plant traditional use",
+    "traditional fiber plant use",
+    "traditional dye plants",
+    "sacred plants indigenous",
+    "ritual plants traditional culture",
+    "traditional plant breeding",
+    "indigenous seed sovereignty",
+    "traditional agroforestry plants",
+    "ethnopharmacology plant conservation"
+  ],
+
+  "conservation_genetics_expanded": [
+    "conservation genetics population",
+    "genetic diversity conservation",
+    "inbreeding depression wildlife",
+    "genetic rescue conservation",
+    "population genetics endangered species",
+    "evolutionary potential conservation",
+    "ancient DNA conservation",
+    "genomics conservation applications",
+    "molecular ecology conservation",
+    "genetic monitoring wildlife",
+    "hybridization conservation genetics"
+  ],
+
+  "conservation_social_science": [
+    "conservation policy biodiversity",
+    "environmental law biodiversity protection",
+    "conservation economics",
+    "willingness to pay conservation",
+    "ecosystem services valuation",
+    "conservation finance mechanisms",
+    "conservation trust fund",
+    "conservation social science",
+    "environmental education biodiversity",
+    "conservation awareness",
+    "stakeholder engagement conservation",
+    "conservation conflict resolution",
+    "community conservation governance",
+    "conservation justice equity"
+  ],
+
+  "one_health_conservation": [
+    "wildlife disease conservation",
+    "zoonotic disease biodiversity",
+    "conservation medicine",
+    "wildlife health monitoring",
+    "disease ecology conservation",
+    "pathogen spillover wildlife",
+    "wildlife veterinary conservation",
+    "emerging infectious disease wildlife"
+  ],
+
+  "landscape_ecology_conservation": [
+    "landscape connectivity conservation",
+    "habitat corridor design",
+    "metapopulation dynamics conservation",
+    "source-sink dynamics conservation",
+    "edge effects biodiversity",
+    "habitat fragmentation landscape",
+    "landscape permeability wildlife",
+    "stepping stone habitat conservation",
+    "matrix habitat conservation"
+  ],
+
+  "additional_threats": [
+    "light pollution biodiversity impact",
+    "noise pollution wildlife behavior",
+    "road mortality wildlife",
+    "roadkill wildlife conservation",
+    "wind turbine bird bat mortality",
+    "fishing gear entanglement marine",
+    "ghost fishing gear marine",
+    "ship strikes whale conservation",
+    "power line bird mortality",
+    "window collision bird mortality"
+  ],
+
+  "conservation_behavior_ecology": [
+    "animal behavior conservation",
+    "migration ecology conservation",
+    "breeding ecology endangered species",
+    "foraging ecology conservation",
+    "social behavior wildlife conservation",
+    "dispersal ecology conservation",
+    "habitat selection wildlife",
+    "territoriality conservation implications",
+    "mating system conservation"
+  ],
+
+  "search_strategies": {
+    "highest_priority": {
+      "description": "Most specific conservation science queries",
+      "categories": ["conservation_general", "conservation_methods", "traditional_ecological_knowledge"]
+    },
+    "high_priority": {
+      "description": "Ecosystem and species specific",
+      "categories": ["ecosystems", "taxonomic_groups", "iconic_threatened_species", "threats", "additional_threats"]
+    },
+    "medium_priority": {
+      "description": "Climate, sustainability, and interventions",
+      "categories": ["climate_biodiversity", "sustainability", "conservation_interventions", "frameworks"]
+    },
+    "geographic_priority": {
+      "description": "Biodiversity hotspots, key regions, and protected areas",
+      "categories": ["countries_regions", "specific_protected_areas"]
+    },
+    "specialized_environmental": {
+      "description": "Specialized environmental conservation domains",
+      "categories": ["marine_conservation", "freshwater_conservation", "soil_biodiversity", "pollination_seed_dispersal", "conservation_technology", "environmental_monitoring", "ecosystem_services", "restoration_ecology"]
+    },
+    "species_diversity": {
+      "description": "Comprehensive taxonomic diversity coverage",
+      "categories": ["plant_diversity", "marine_species_diversity", "freshwater_species", "invertebrate_diversity", "microbial_diversity", "symbiotic_relationships", "additional_vertebrates"]
+    },
+    "cultural_social_science": {
+      "description": "Social science, traditional knowledge, and ethnobotany",
+      "categories": ["ethnobotany_expanded", "conservation_social_science", "conservation_genetics_expanded", "conservation_behavior_ecology"]
+    },
+    "cross_cutting": {
+      "description": "One Health, landscape ecology, and integrative approaches",
+      "categories": ["one_health_conservation", "landscape_ecology_conservation"]
+    }
+  },
+
+  "filters": {
+    "date_range": {
+      "from": "1990-01-01",
+      "to": "2025-12-31",
+      "rationale": "35 years of modern conservation science from Rio Earth Summit to present"
+    },
+    "content_requirements": {
+      "must_have_abstract": true,
+      "must_have_doi": true,
+      "rationale": "Abstract required for AI metadata extraction"
+    },
+    "language": {
+      "preferred": ["en"],
+      "rationale": "English for consistent AI processing"
+    }
+  },
+
+  "rate_limits": {
+    "crossref_api": {
+      "requests_per_second": 1,
+      "notes": "Polite rate limit to CrossRef API"
+    },
+    "claude_api": {
+      "papers_per_batch": 2,
+      "delay_seconds": 3,
+      "notes": "AI rate limit: 2 papers every 3 seconds"
+    }
+  }
+}

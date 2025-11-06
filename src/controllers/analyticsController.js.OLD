@@ -1,0 +1,1333 @@
+import pkg from 'pg';
+const { Pool } = pkg;
+import Anthropic from '@anthropic-ai/sdk';
+
+const pool = new Pool({
+  host: process.env.DB_HOST || 'localhost',
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME || 'compassid',
+  user: process.env.DB_USER || 'desertmountain',
+  password: process.env.DB_PASSWORD,
+});
+
+// Initialize Anthropic client
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+// In-memory cache for geocoded coordinates (persist across requests)
+const geocodeCache = new Map();
+
+/**
+ * Get weekly trends for the analytics map
+ * @route GET /api/analytics/trends
+ * @query {string} week_start - Optional: ISO date for specific week
+ * @query {string} region - Optional: Filter by region
+ */
+export async function getWeeklyTrends(req, res) {
+  try {
+    const { week_start, region } = req.query;
+
+    let query = `
+      SELECT
+        id,
+        week_start,
+        region,
+        activity_score,
+        studies_count,
+        datasets_count,
+        researchers_count,
+        topic_focus,
+        trend,
+        dominant_taxa,
+        dominant_framework,
+        dominant_ecosystem,
+        methods,
+        created_at
+      FROM weekly_trends
+      WHERE 1=1
+    `;
+
+    const params = [];
+    let paramCount = 1;
+
+    if (week_start) {
+      query += ` AND week_start = $${paramCount}`;
+      params.push(week_start);
+      paramCount++;
+    } else {
+      // Default: get most recent week
+      query += ` AND week_start = (SELECT MAX(week_start) FROM weekly_trends)`;
+    }
+
+    if (region) {
+      query += ` AND region = $${paramCount}`;
+      params.push(region);
+      paramCount++;
+    }
+
+    query += ` ORDER BY activity_score DESC`;
+
+    const result = await pool.query(query, params);
+
+    res.json({
+      success: true,
+      count: result.rows.length,
+      trends: result.rows,
+    });
+  } catch (error) {
+    console.error('Get weekly trends error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch weekly trends',
+    });
+  }
+}
+
+/**
+ * Get analyzed papers with optional filters
+ * @route GET /api/analytics/papers
+ * @query {number} week_number - Optional: Filter by week number
+ * @query {string} region - Optional: Filter by region
+ * @query {string} framework - Optional: Filter by framework
+ * @query {string} taxa - Optional: Filter by taxa
+ * @query {number} limit - Optional: Limit results (default: 50)
+ * @query {number} offset - Optional: Offset for pagination (default: 0)
+ */
+export async function getAnalyzedPapers(req, res) {
+  try {
+    const {
+      week_number,
+      region,
+      framework,
+      taxa,
+      ecosystem,
+      methods,
+      limit = 50,
+      offset = 0,
+    } = req.query;
+
+    let query = `
+      SELECT
+        id,
+        doi,
+        title,
+        abstract,
+        authors,
+        published_date,
+        journal,
+        framework,
+        taxa,
+        ecosystem,
+        region,
+        methods,
+        week_number,
+        analyzed_at,
+        created_at
+      FROM analyzed_papers
+      WHERE 1=1
+    `;
+
+    const params = [];
+    let paramCount = 1;
+
+    if (week_number) {
+      query += ` AND week_number = $${paramCount}`;
+      params.push(week_number);
+      paramCount++;
+    }
+
+    if (region) {
+      query += ` AND region = $${paramCount}`;
+      params.push(region);
+      paramCount++;
+    }
+
+    if (framework) {
+      query += ` AND framework = $${paramCount}`;
+      params.push(framework);
+      paramCount++;
+    }
+
+    if (taxa) {
+      query += ` AND taxa = $${paramCount}`;
+      params.push(taxa);
+      paramCount++;
+    }
+
+    if (ecosystem) {
+      query += ` AND ecosystem = $${paramCount}`;
+      params.push(ecosystem);
+      paramCount++;
+    }
+
+    if (methods) {
+      // Filter by JSONB array containing the method
+      query += ` AND methods @> $${paramCount}::jsonb`;
+      params.push(JSON.stringify([methods]));
+      paramCount++;
+    }
+
+    query += ` ORDER BY analyzed_at DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+    params.push(parseInt(limit), parseInt(offset));
+
+    const result = await pool.query(query, params);
+
+    // Get total count for pagination
+    let countQuery = `SELECT COUNT(*) FROM analyzed_papers WHERE 1=1`;
+    const countParams = [];
+    let countParamIdx = 1;
+
+    if (week_number) {
+      countQuery += ` AND week_number = $${countParamIdx}`;
+      countParams.push(week_number);
+      countParamIdx++;
+    }
+
+    if (region) {
+      countQuery += ` AND region = $${countParamIdx}`;
+      countParams.push(region);
+      countParamIdx++;
+    }
+
+    if (framework) {
+      countQuery += ` AND framework = $${countParamIdx}`;
+      countParams.push(framework);
+      countParamIdx++;
+    }
+
+    if (taxa) {
+      countQuery += ` AND taxa = $${countParamIdx}`;
+      countParams.push(taxa);
+      countParamIdx++;
+    }
+
+    if (ecosystem) {
+      countQuery += ` AND ecosystem = $${countParamIdx}`;
+      countParams.push(ecosystem);
+      countParamIdx++;
+    }
+
+    if (methods) {
+      countQuery += ` AND methods @> $${countParamIdx}::jsonb`;
+      countParams.push(JSON.stringify([methods]));
+      countParamIdx++;
+    }
+
+    const countResult = await pool.query(countQuery, countParams);
+    const total = parseInt(countResult.rows[0].count);
+
+    res.json({
+      success: true,
+      count: result.rows.length,
+      total,
+      offset: parseInt(offset),
+      limit: parseInt(limit),
+      papers: result.rows,
+    });
+  } catch (error) {
+    console.error('Get analyzed papers error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch analyzed papers',
+    });
+  }
+}
+
+/**
+ * Get trending topics across all COMPASS metadata dimensions
+ * @route GET /api/analytics/trending-topics
+ * @query {number} limit - Optional: Number of topics per category (default: 3)
+ */
+export async function getTrendingTopics(req, res) {
+  try {
+    const { limit = 3 } = req.query;
+
+    // Helper to categorize raw data into engaging themes
+    const categorizeTheme = (type, rawName) => {
+      const name = rawName?.toLowerCase() || '';
+
+      // Framework patterns -> Policy & Governance themes
+      if (type === 'framework') {
+        if (name.includes('iucn') || name.includes('red list')) {
+          return 'Red List & Species Assessment';
+        }
+        if (name.includes('cbd') || name.includes('biodiversity') || name.includes('aichi') || name.includes('kunming')) {
+          return 'Global Biodiversity Frameworks';
+        }
+        if (name.includes('climate') || name.includes('unfccc') || name.includes('paris')) {
+          return 'Climate Action & Conservation';
+        }
+        // Handle SDGs - keep them specific by extracting the number
+        if (name.includes('sdg')) {
+          // Extract SDG number (e.g., "SDG 14", "SDG 15.5")
+          const sdgMatch = name.match(/sdg\s*(\d+)/i);
+          if (sdgMatch) {
+            const sdgNum = sdgMatch[1];
+            // Map to readable names
+            if (sdgNum === '14') return 'SDG 14: Life Below Water';
+            if (sdgNum === '15') return 'SDG 15: Life on Land';
+            if (sdgNum === '13') return 'SDG 13: Climate Action';
+            if (sdgNum === '11') return 'SDG 11: Sustainable Cities';
+            if (sdgNum === '2') return 'SDG 2: Zero Hunger';
+            if (sdgNum === '6') return 'SDG 6: Clean Water';
+            // Default for other SDGs
+            return `SDG ${sdgNum}`;
+          }
+        }
+        return rawName?.replace(/Framework|Strategy|Action|Plan/gi, '').trim() || rawName;
+      }
+
+      // Methods patterns -> Technology & Innovation themes
+      if (type === 'methods') {
+        if (name.includes('ai') || name.includes('machine learning') || name.includes('deep learning') || name.includes('neural')) {
+          return 'AI & Machine Learning';
+        }
+        if (name.includes('dna') || name.includes('genetic') || name.includes('genomic') || name.includes('edna')) {
+          return 'Genetic & eDNA Analysis';
+        }
+        if (name.includes('remote sensing') || name.includes('satellite') || name.includes('drone') || name.includes('lidar')) {
+          return 'Remote Sensing & Drones';
+        }
+        if (name.includes('camera trap') || name.includes('acoustic') || name.includes('tracking')) {
+          return 'Wildlife Monitoring Tech';
+        }
+        if (name.includes('model') || name.includes('simulation') || name.includes('prediction')) {
+          return 'Predictive Modeling';
+        }
+      }
+
+      // Ecosystem patterns -> Habitat themes (all conservation domains)
+      if (type === 'ecosystem') {
+        // Marine ecosystems
+        if (name.includes('m4.1') || name.includes('deep sea') || name.includes('abyssal')) {
+          return 'Deep Sea Ecosystems';
+        }
+        if (name.includes('m1.1') || name.includes('epipelagic') || name.includes('open ocean')) {
+          return 'Open Ocean Surface';
+        }
+        if (name.includes('m3.1') || name.includes('continental shelf')) {
+          return 'Continental Shelf Waters';
+        }
+        if (name.includes('m3.2') || name.includes('coastal water')) {
+          return 'Coastal Waters';
+        }
+        if (name.includes('m3.3') || name.includes('soft-bottom') || name.includes('subtidal')) {
+          return 'Soft-Bottom Marine Habitats';
+        }
+        if (name.includes('coral') || name.includes('reef')) {
+          return 'Coral Reefs';
+        }
+        if (name.includes('m3.6') || name.includes('coastal vegetation') || name.includes('seagrass')) {
+          return 'Coastal Vegetation & Seagrass';
+        }
+        if (name.includes('m3.7') || name.includes('blue carbon') || name.includes('coastal carbon')) {
+          return 'Blue Carbon Ecosystems';
+        }
+        if (name.includes('m3.9') || name.includes('marine protected')) {
+          return 'Marine Protected Areas';
+        }
+
+        // Terrestrial ecosystems
+        if (name.includes('t1.1') || name.includes('tropical') && (name.includes('forest') || name.includes('rainforest'))) {
+          return 'Tropical Rainforests';
+        }
+        if (name.includes('t1.2') || name.includes('tropical') && (name.includes('dry') || name.includes('seasonal'))) {
+          return 'Tropical Dry Forests';
+        }
+        if (name.includes('t2.1') || name.includes('boreal') || name.includes('taiga')) {
+          return 'Boreal Forests & Taiga';
+        }
+        if (name.includes('t2.2') || name.includes('temperate') && name.includes('forest')) {
+          return 'Temperate Forests';
+        }
+        if (name.includes('t3.1') || name.includes('grassland') || name.includes('savanna')) {
+          return 'Grasslands & Savannas';
+        }
+        if (name.includes('t4.1') || name.includes('tundra') || name.includes('arctic')) {
+          return 'Tundra & Arctic';
+        }
+        if (name.includes('t5.1') || name.includes('desert')) {
+          return 'Deserts & Drylands';
+        }
+        if (name.includes('forest') || name.includes('rainforest') || name.includes('woodland')) {
+          return 'Forest Ecosystems';
+        }
+
+        // Freshwater ecosystems
+        if (name.includes('f1.1') || name.includes('river') || name.includes('stream')) {
+          return 'Rivers & Streams';
+        }
+        if (name.includes('f2.1') || name.includes('lake')) {
+          return 'Lakes';
+        }
+        if (name.includes('f3.1') || name.includes('constructed wetland') || name.includes('reservoir')) {
+          return 'Constructed Wetlands & Reservoirs';
+        }
+        if (name.includes('wetland') || name.includes('mangrove') || name.includes('marsh')) {
+          return 'Wetlands & Mangroves';
+        }
+
+        // Urban and other
+        if (name.includes('m6.1') || name.includes('urban') || name.includes('city')) {
+          return 'Urban Ecosystems';
+        }
+        if (name.includes('protected area') || name.includes('conservation area')) {
+          return 'Protected Areas';
+        }
+      }
+
+      // Return raw name if no pattern matches
+      return rawName;
+    };
+
+    // Get most recent week that has data
+    const mostRecentWeek = await pool.query(`
+      SELECT
+        week_number,
+        MIN(analyzed_at) as week_start
+      FROM analyzed_papers
+      WHERE week_number IS NOT NULL
+      GROUP BY week_number
+      ORDER BY week_number DESC
+      LIMIT 1
+    `);
+
+    if (mostRecentWeek.rows.length === 0) {
+      return res.json({
+        success: true,
+        count: 0,
+        topics: [],
+        byCategory: {},
+        metadata: {
+          weekNumber: null,
+          weekStart: null,
+          algorithm: 'No data available',
+          criteriaDescription: 'No papers analyzed yet'
+        }
+      });
+    }
+
+    const weekNumber = parseInt(mostRecentWeek.rows[0].week_number);
+    const weekStart = mostRecentWeek.rows[0].week_start;
+
+    const baseWhere = `WHERE week_number = $1`;
+    const params = [weekNumber];
+
+    // Query template for text fields (with week-over-week growth and scoring)
+    const queryTemplate = (field, fieldName) => `
+      WITH current_week AS (
+        SELECT
+          INITCAP(TRIM(${field})) as name,
+          COUNT(*) as paper_count,
+          COUNT(DISTINCT region) as region_count,
+          COUNT(DISTINCT id) as method_count
+        FROM analyzed_papers
+        WHERE week_number = $1
+          AND ${field} IS NOT NULL
+          AND ${field} != ''
+        GROUP BY INITCAP(TRIM(${field}))
+      ),
+      prev_week AS (
+        SELECT
+          INITCAP(TRIM(${field})) as name,
+          COUNT(*) as paper_count
+        FROM analyzed_papers
+        WHERE week_number = $1 - 1
+          AND ${field} IS NOT NULL
+          AND ${field} != ''
+        GROUP BY INITCAP(TRIM(${field}))
+      )
+      SELECT
+        cw.name,
+        '${fieldName}' as category,
+        cw.paper_count,
+        cw.region_count,
+        cw.method_count,
+        COALESCE(pw.paper_count, 0) as prev_week_count,
+        CASE
+          WHEN pw.paper_count IS NULL OR pw.paper_count = 0 THEN 999
+          ELSE ROUND(((cw.paper_count::float - pw.paper_count) / pw.paper_count * 100)::numeric, 0)
+        END as growth_rate,
+        -- Trending score: volume (40%) + diversity (30%) + momentum (30%)
+        (
+          cw.paper_count * 0.4 +
+          cw.region_count * 0.2 +
+          cw.method_count * 0.1 +
+          CASE
+            WHEN pw.paper_count IS NULL OR pw.paper_count = 0 THEN cw.paper_count * 0.3
+            ELSE ((cw.paper_count::float - pw.paper_count) / GREATEST(pw.paper_count, 1)) * 3
+          END
+        ) as trending_score
+      FROM current_week cw
+      LEFT JOIN prev_week pw ON cw.name = pw.name
+      ORDER BY trending_score DESC, paper_count DESC
+      LIMIT $2
+    `;
+
+    // Special query for methods (JSON array field) with growth tracking
+    const methodsQuery = `
+      WITH current_week AS (
+        SELECT
+          jsonb_array_elements_text(methods) as name,
+          COUNT(*) as paper_count,
+          COUNT(DISTINCT region) as region_count
+        FROM analyzed_papers
+        WHERE week_number = $1
+          AND methods IS NOT NULL
+          AND jsonb_array_length(methods) > 0
+        GROUP BY name
+      ),
+      prev_week AS (
+        SELECT
+          jsonb_array_elements_text(methods) as name,
+          COUNT(*) as paper_count
+        FROM analyzed_papers
+        WHERE week_number = $1 - 1
+          AND methods IS NOT NULL
+          AND jsonb_array_length(methods) > 0
+        GROUP BY name
+      )
+      SELECT
+        cw.name,
+        'methods' as category,
+        cw.paper_count,
+        cw.region_count,
+        1 as method_count,
+        COALESCE(pw.paper_count, 0) as prev_week_count,
+        CASE
+          WHEN pw.paper_count IS NULL OR pw.paper_count = 0 THEN 999
+          ELSE ROUND(((cw.paper_count::float - pw.paper_count) / pw.paper_count * 100)::numeric, 0)
+        END as growth_rate,
+        (
+          cw.paper_count * 0.4 +
+          cw.region_count * 0.2 +
+          1 * 0.1 +
+          CASE
+            WHEN pw.paper_count IS NULL OR pw.paper_count = 0 THEN cw.paper_count * 0.3
+            ELSE ((cw.paper_count::float - pw.paper_count) / GREATEST(pw.paper_count, 1)) * 3
+          END
+        ) as trending_score
+      FROM current_week cw
+      LEFT JOIN prev_week pw ON cw.name = pw.name
+      ORDER BY trending_score DESC, paper_count DESC
+      LIMIT $2
+    `;
+
+    // Execute all queries in parallel
+    const [
+      frameworksResult,
+      taxaResult,
+      ecosystemsResult,
+      regionsResult,
+      methodsResult,
+    ] = await Promise.all([
+      pool.query(queryTemplate('framework', 'framework'), [weekNumber, limit]),
+      pool.query(queryTemplate('taxa', 'taxa'), [weekNumber, limit]),
+      pool.query(queryTemplate('ecosystem', 'ecosystem'), [weekNumber, limit]),
+      pool.query(queryTemplate('region', 'region'), [weekNumber, limit]),
+      pool.query(methodsQuery, [weekNumber, limit]),
+    ]);
+
+    // Generate unique, engaging summaries for each specific topic
+    const generateSummary = (type, name, count, regionCount) => {
+      const papers = count === 1 ? 'paper' : 'papers';
+      const regions = regionCount === 1 ? 'region' : 'regions';
+
+      // Custom summaries for specific topics (all conservation domains)
+      const customSummaries = {
+        // Frameworks
+        'Paris Agreement': `Climate action across ecosystems - ${count} ${papers} exploring how conservation contributes to Paris Agreement targets across ${regionCount} ${regions}`,
+        'CBD': `Biodiversity takes center stage with ${count} ${papers} examining Convention on Biological Diversity implementation across ${regionCount} diverse ${regions}`,
+        'Aichi Targets': `Progress tracking: ${count} ${papers} assess how close we are to meeting Aichi Biodiversity Targets in ${regionCount} ${regions}`,
+        'Kunming-Montreal': `New era for nature - ${count} ${papers} analyze the ambitious Kunming-Montreal framework across ${regionCount} ${regions}`,
+        'SDG 14': `Ocean sustainability spotlight: ${count} ${papers} track progress toward Sustainable Development Goal 14 in ${regionCount} ${regions}`,
+        'SDG 15': `Life on land: ${count} ${papers} track progress toward Sustainable Development Goal 15 in ${regionCount} ${regions}`,
+
+        // Taxa - Marine
+        'Coral': `Reef resilience under scrutiny - ${count} ${papers} investigate coral conservation challenges across ${regionCount} ${regions}`,
+        'Fish': `Aquatic biodiversity: ${count} ${papers} explore sustainable fisheries and fish conservation across ${regionCount} ${regions}`,
+        'Marine mammals': `Protecting ocean giants - ${count} ${papers} focus on marine mammal conservation in ${regionCount} ${regions}`,
+        'Seabirds': `Wings over water: ${count} ${papers} examine seabird populations and threats across ${regionCount} ${regions}`,
+        'Sea turtles': `Ancient mariners at risk - ${count} ${papers} track sea turtle conservation efforts in ${regionCount} ${regions}`,
+        'Sharks': `Apex predators in peril: ${count} ${papers} address shark conservation across ${regionCount} ${regions}`,
+        'Whales': `Giants of the deep: ${count} ${papers} study whale population recovery in ${regionCount} ${regions}`,
+
+        // Taxa - Terrestrial
+        'Mammals': `Protecting terrestrial wildlife - ${count} ${papers} study mammal conservation and population dynamics in ${regionCount} ${regions}`,
+        'Birds': `Avian diversity in focus: ${count} ${papers} track bird populations and habitat needs across ${regionCount} ${regions}`,
+        'Amphibians': `Sentinel species: ${count} ${papers} monitor amphibian health as ecosystem indicators in ${regionCount} ${regions}`,
+        'Reptiles': `Scaling conservation: ${count} ${papers} address reptile conservation challenges in ${regionCount} ${regions}`,
+        'Plants': `Flora in focus: ${count} ${papers} examine plant diversity and conservation across ${regionCount} ${regions}`,
+        'Insects': `Small but mighty: ${count} ${papers} highlight insect conservation and pollinator protection in ${regionCount} ${regions}`,
+
+        // Ecosystems - Marine
+        'Coral reefs': `Underwater rainforests: ${count} ${papers} examine coral reef health and restoration in ${regionCount} ${regions}`,
+        'Mangroves': `Blue carbon heroes - ${count} ${papers} highlight mangrove conservation benefits across ${regionCount} ${regions}`,
+        'Seagrass': `Hidden meadows: ${count} ${papers} reveal seagrass ecosystem importance in ${regionCount} ${regions}`,
+        'Deep sea': `Exploring the abyss - ${count} ${papers} investigate deep sea ecosystems across ${regionCount} ${regions}`,
+        'Kelp forests': `Underwater forests: ${count} ${papers} study kelp ecosystem dynamics in ${regionCount} ${regions}`,
+
+        // Ecosystems - Terrestrial
+        'Tropical Rainforests': `Lungs of the Earth: ${count} ${papers} examine rainforest conservation and biodiversity in ${regionCount} ${regions}`,
+        'Boreal Forests & Taiga': `Northern wilderness: ${count} ${papers} study boreal forest ecosystems and climate impacts in ${regionCount} ${regions}`,
+        'Grasslands & Savannas': `Open landscapes: ${count} ${papers} explore grassland conservation and restoration in ${regionCount} ${regions}`,
+        'Deserts & Drylands': `Life in extremes: ${count} ${papers} investigate dryland biodiversity and adaptation in ${regionCount} ${regions}`,
+        'Forest Ecosystems': `Trees for life: ${count} ${papers} assess forest health and conservation strategies in ${regionCount} ${regions}`,
+
+        // Ecosystems - Freshwater
+        'Rivers & Streams': `Flowing ecosystems: ${count} ${papers} examine river conservation and freshwater biodiversity in ${regionCount} ${regions}`,
+        'Lakes': `Inland waters: ${count} ${papers} study lake ecosystems and conservation challenges in ${regionCount} ${regions}`,
+        'Wetlands & Mangroves': `Nature's filters: ${count} ${papers} highlight wetland conservation benefits across ${regionCount} ${regions}`,
+
+        // Methods
+        'Remote sensing': `Eyes in the sky: ${count} ${papers} leverage satellite data for conservation monitoring across ${regionCount} ${regions}`,
+        'eDNA': `Genetic detective work - ${count} ${papers} use environmental DNA to track biodiversity in ${regionCount} ${regions}`,
+        'Acoustic monitoring': `Listening to nature: ${count} ${papers} deploy sound monitoring for wildlife tracking across ${regionCount} ${regions}`,
+        'Citizen science': `Power to the people - ${count} ${papers} harness community engagement for conservation in ${regionCount} ${regions}`,
+        'Machine learning': `AI for conservation: ${count} ${papers} apply artificial intelligence to protect wildlife in ${regionCount} ${regions}`,
+      };
+
+      // Return custom summary if available
+      if (customSummaries[name]) {
+        return customSummaries[name];
+      }
+
+      // Fallback to type-based templates for unknown topics
+      switch(type) {
+        case 'framework':
+          return `Policy in action: ${count} ${papers} track ${name} implementation across ${regionCount} ${regions}, revealing gaps and opportunities`;
+        case 'taxa':
+          return `${name} in focus - ${count} ${papers} examine population trends and conservation needs across ${regionCount} ${regions}`;
+        case 'ecosystem':
+          return `${name} under the microscope: ${count} ${papers} assess ecosystem health and restoration potential in ${regionCount} ${regions}`;
+        case 'region':
+          return `${count} ${papers} spotlight conservation challenges and solutions in this biodiversity hotspot`;
+        case 'methods':
+          return `Innovation in action - ${count} ${papers} demonstrate ${name} effectiveness across ${regionCount} ${regions}`;
+        default:
+          return `${count} recent ${papers} on this emerging conservation topic`;
+      }
+    };
+
+    // Helper to determine if topic is "Rising Fast" (only for topics with actual high growth, not new topics)
+    const isRisingFast = (growthRate) => {
+      // Only show badge for topics with real growth >= 200% (not new topics with 999)
+      return growthRate >= 200 && growthRate !== 999;
+    };
+
+    // Helper to merge topics with the same display name (due to categorization)
+    const mergeTopicsByTitle = (topics) => {
+      const merged = {};
+      topics.forEach(topic => {
+        if (merged[topic.title]) {
+          // Merge with existing topic
+          const existing = merged[topic.title];
+          existing.paperCount += topic.paperCount;
+          // Keep the most frequently occurring originalName (or concatenate them for multi-value filtering)
+          existing.originalNames = existing.originalNames || [existing.originalName];
+          if (!existing.originalNames.includes(topic.originalName)) {
+            existing.originalNames.push(topic.originalName);
+          }
+          // Recalculate trending score (weighted average)
+          existing.trendingScore = Math.max(existing.trendingScore, topic.trendingScore);
+          // Use highest growth rate
+          existing.growthRate = Math.max(existing.growthRate, topic.growthRate);
+          existing.risingFast = isRisingFast(existing.growthRate);
+          // Update activity string
+          const paperCount = existing.paperCount;
+          const regionMatch = existing.activity.match(/(\d+) regions/);
+          const regionCount = regionMatch ? parseInt(regionMatch[1]) : 0;
+          existing.activity = `${paperCount} papers • ${regionCount} regions`;
+        } else {
+          // First occurrence
+          merged[topic.title] = { ...topic };
+        }
+      });
+      return Object.values(merged);
+    };
+
+    // Format results by category with growth tracking
+    const topics = {
+      frameworks: mergeTopicsByTitle(frameworksResult.rows.map(row => ({
+        title: categorizeTheme('framework', row.name),
+        originalName: row.name, // Keep original for filtering/searching
+        type: 'framework',
+        category: 'Conservation Frameworks',
+        activity: `${row.paper_count} papers • ${row.region_count} regions`,
+        summary: generateSummary('framework', row.name, parseInt(row.paper_count), parseInt(row.region_count)),
+        paperCount: parseInt(row.paper_count),
+        growthRate: parseInt(row.growth_rate),
+        risingFast: isRisingFast(parseInt(row.growth_rate)),
+        trendingScore: parseFloat(row.trending_score),
+      }))),
+      taxa: taxaResult.rows.map(row => ({
+        title: row.name, // Keep original for taxa (specific species names)
+        originalName: row.name,
+        type: 'taxa',
+        category: 'Taxa',
+        activity: `${row.paper_count} papers • ${row.region_count} regions`,
+        summary: generateSummary('taxa', row.name, parseInt(row.paper_count), parseInt(row.region_count)),
+        paperCount: parseInt(row.paper_count),
+        growthRate: parseInt(row.growth_rate),
+        risingFast: isRisingFast(parseInt(row.growth_rate)),
+        trendingScore: parseFloat(row.trending_score),
+      })),
+      ecosystems: mergeTopicsByTitle(ecosystemsResult.rows.map(row => ({
+        title: categorizeTheme('ecosystem', row.name),
+        originalName: row.name, // Keep original for filtering/searching
+        type: 'ecosystem',
+        category: 'Ecosystems',
+        activity: `${row.paper_count} papers • ${row.region_count} regions`,
+        summary: generateSummary('ecosystem', row.name, parseInt(row.paper_count), parseInt(row.region_count)),
+        paperCount: parseInt(row.paper_count),
+        growthRate: parseInt(row.growth_rate),
+        risingFast: isRisingFast(parseInt(row.growth_rate)),
+        trendingScore: parseFloat(row.trending_score),
+      }))),
+      regions: regionsResult.rows.map(row => ({
+        title: row.name,
+        originalName: row.name,
+        type: 'region',
+        category: 'Geographic Regions',
+        activity: `${row.paper_count} papers`,
+        summary: generateSummary('region', row.name, parseInt(row.paper_count), 0),
+        paperCount: parseInt(row.paper_count),
+        growthRate: parseInt(row.growth_rate),
+        risingFast: isRisingFast(parseInt(row.growth_rate)),
+        trendingScore: parseFloat(row.trending_score),
+      })),
+      methods: mergeTopicsByTitle(methodsResult.rows.map(row => ({
+        title: categorizeTheme('methods', row.name),
+        originalName: row.name, // Keep original for filtering/searching
+        type: 'methods',
+        category: 'Research Methods',
+        activity: `${row.paper_count} papers • ${row.region_count} regions`,
+        summary: generateSummary('methods', row.name, parseInt(row.paper_count), parseInt(row.region_count)),
+        paperCount: parseInt(row.paper_count),
+        growthRate: parseInt(row.growth_rate),
+        risingFast: isRisingFast(parseInt(row.growth_rate)),
+        trendingScore: parseFloat(row.trending_score),
+      }))),
+    };
+
+    // Also return a flat array for backward compatibility
+    const allTopics = [
+      ...topics.frameworks,
+      ...topics.taxa,
+      ...topics.ecosystems,
+      ...topics.regions,
+      ...topics.methods,
+    ];
+
+    res.json({
+      success: true,
+      count: allTopics.length,
+      topics: allTopics,
+      byCategory: topics,
+      metadata: {
+        weekNumber,
+        weekStart,
+        algorithm: 'Multi-signal trending score: volume (40%) + diversity (30%) + growth momentum (30%)',
+        criteriaDescription: 'Topics are ranked by a composite score combining paper volume, geographic/methodological diversity, and week-over-week growth. Topics with ≥100% growth or new this week are marked "Rising Fast"'
+      }
+    });
+  } catch (error) {
+    console.error('Get trending topics error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch trending topics',
+    });
+  }
+}
+
+/**
+ * Get analytics summary statistics
+ * @route GET /api/analytics/summary
+ */
+export async function getAnalyticsSummary(req, res) {
+  try {
+    // Total papers analyzed
+    const totalPapersResult = await pool.query(
+      'SELECT COUNT(*) FROM analyzed_papers'
+    );
+    const totalPapers = parseInt(totalPapersResult.rows[0].count);
+
+    // Papers this week
+    const thisWeekResult = await pool.query(
+      'SELECT COUNT(*) FROM analyzed_papers WHERE week_number = EXTRACT(WEEK FROM NOW())'
+    );
+    const papersThisWeek = parseInt(thisWeekResult.rows[0].count);
+
+    // Active regions
+    const regionsResult = await pool.query(
+      'SELECT COUNT(DISTINCT region) FROM weekly_trends WHERE week_start >= NOW() - INTERVAL \'30 days\''
+    );
+    const activeRegions = parseInt(regionsResult.rows[0].count);
+
+    // Top frameworks
+    const topFrameworksResult = await pool.query(
+      `SELECT framework, COUNT(*) as count
+       FROM analyzed_papers
+       WHERE framework IS NOT NULL
+       GROUP BY framework
+       ORDER BY count DESC
+       LIMIT 5`
+    );
+
+    // Top taxa
+    const topTaxaResult = await pool.query(
+      `SELECT taxa, COUNT(*) as count
+       FROM analyzed_papers
+       WHERE taxa IS NOT NULL
+       GROUP BY taxa
+       ORDER BY count DESC
+       LIMIT 5`
+    );
+
+    res.json({
+      success: true,
+      summary: {
+        total_papers: totalPapers,
+        papers_this_week: papersThisWeek,
+        active_regions: activeRegions,
+        top_frameworks: topFrameworksResult.rows,
+        top_taxa: topTaxaResult.rows,
+      },
+    });
+  } catch (error) {
+    console.error('Get analytics summary error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch analytics summary',
+    });
+  }
+}
+
+/**
+ * AI-powered geocoding function to get precise coordinates for region names
+ * Uses Claude to understand regional context and provide accurate lat/lng
+ * @param {string} regionName - Name of the region (e.g., "Kashmir, India", "Maluku Islands, Indonesia")
+ * @returns {Promise<{lat: number, lng: number} | null>} Coordinates or null if not found
+ */
+async function geocodeRegionWithAI(regionName) {
+  // Check cache first
+  if (geocodeCache.has(regionName)) {
+    return geocodeCache.get(regionName);
+  }
+
+  try {
+    const message = await anthropic.messages.create({
+      model: 'claude-3-5-haiku-20241022',
+      max_tokens: 150,
+      system: 'You are a geography expert. Return ONLY valid JSON with coordinates. NO explanations, NO apologies, NO additional text. For multi-region strings, use the FIRST region. Format: {"lat": number, "lng": number}',
+      messages: [
+        {
+          role: 'user',
+          content: `Coordinates for: ${regionName}\n\nJSON only: {"lat": number, "lng": number}`,
+        },
+      ],
+    });
+
+    const responseText = message.content[0].text.trim();
+
+    // Extract JSON from response (handle markdown code blocks)
+    let jsonText = responseText;
+    if (jsonText.includes('```')) {
+      jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+    }
+
+    const coords = JSON.parse(jsonText);
+
+    if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number') {
+      // Cache the result
+      geocodeCache.set(regionName, coords);
+      console.log(`✓ Geocoded "${regionName}":`, coords);
+      return coords;
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`✗ Geocoding error for "${regionName}":`, error.message);
+    return null;
+  }
+}
+
+/**
+ * Get geographic distribution for map visualization
+ * @route GET /api/analytics/map-data
+ */
+export async function getMapData(req, res) {
+  try {
+    // Aggregate papers by region from analyzed_papers table
+    const query = `
+      SELECT
+        region,
+        COUNT(*) as paper_count,
+        COUNT(DISTINCT framework) as framework_count,
+        COUNT(DISTINCT taxa) as taxa_count,
+        COUNT(DISTINCT ecosystem) as ecosystem_count,
+        MODE() WITHIN GROUP (ORDER BY framework) as dominant_framework,
+        MODE() WITHIN GROUP (ORDER BY taxa) as dominant_taxa,
+        MODE() WITHIN GROUP (ORDER BY ecosystem) as dominant_ecosystem,
+        jsonb_agg(DISTINCT methods) FILTER (WHERE methods IS NOT NULL) as all_methods,
+        string_agg(DISTINCT title, ' | ') as sample_titles
+      FROM analyzed_papers
+      WHERE region IS NOT NULL
+        AND region != ''
+        AND region != 'Not specified'
+      GROUP BY region
+      ORDER BY paper_count DESC
+    `;
+
+    const result = await pool.query(query);
+
+    // Extended coordinate mapping for diverse regions
+    const regionCoordinates = {
+      // Oceans and Seas
+      'Antarctic & Southern Ocean': { lat: -60.5, lng: -45.0 },
+      'Arctic Ocean': { lat: 80.0, lng: 0.0 },
+      'Caribbean': { lat: 18.0, lng: -75.0 },
+      'Mediterranean': { lat: 38.0, lng: 15.0 },
+      'Indo-Pacific': { lat: -5.0, lng: 120.0 },
+      'North Atlantic': { lat: 50.0, lng: -30.0 },
+      'South Atlantic': { lat: -30.0, lng: -20.0 },
+      'North Pacific': { lat: 40.0, lng: 170.0 },
+      'Indian Ocean': { lat: -10.0, lng: 75.0 },
+      'Great Barrier Reef': { lat: -18.3, lng: 147.7 },
+      'Eastern Pacific': { lat: 10.0, lng: -95.0 },
+
+      // Countries
+      'Global': { lat: 20, lng: 0 },
+      'India': { lat: 20.5937, lng: 78.9629 },
+      'Nigeria': { lat: 9.082, lng: 8.6753 },
+      'Indonesia': { lat: -0.7893, lng: 113.9213 },
+      'Costa Rica': { lat: 9.7489, lng: -83.7534 },
+      'Italy': { lat: 41.8719, lng: 12.5674 },
+      'Germany': { lat: 51.1657, lng: 10.4515 },
+      'China': { lat: 35.8617, lng: 104.1954 },
+      'Australia': { lat: -25.2744, lng: 133.7751 },
+      'Brazil': { lat: -14.2350, lng: -51.9253 },
+      'United States': { lat: 37.0902, lng: -95.7129 },
+      'Canada': { lat: 56.1304, lng: -106.3468 },
+      'Japan': { lat: 36.2048, lng: 138.2529 },
+      'United Kingdom': { lat: 55.3781, lng: -3.4360 },
+      'France': { lat: 46.2276, lng: 2.2137 },
+      'Spain': { lat: 40.4637, lng: -3.7492 },
+      'Mexico': { lat: 23.6345, lng: -102.5528 },
+      'South Africa': { lat: -30.5595, lng: 22.9375 },
+
+      // Regions
+      'Southeast Asia': { lat: 5.0, lng: 110.0 },
+      'Chinese Coastline': { lat: 30.0, lng: 120.0 },
+      'European Coastal Waters': { lat: 53.0, lng: 5.0 },
+      'European North-West Shelf Seas': { lat: 56.0, lng: 2.0 },
+      'Continental Scale': { lat: 40.0, lng: 0.0 },
+      'Europe': { lat: 50.0, lng: 10.0 },
+      'Asia': { lat: 30.0, lng: 100.0 },
+    };
+
+    // Function to extract main region from multi-region strings
+    const getMainRegion = (regionStr) => {
+      if (!regionStr) return null;
+      // If multiple regions, take the first one
+      const regions = regionStr.split(',').map(r => r.trim());
+      return regions[0];
+    };
+
+    // Function to get coordinates for a region (with fuzzy matching)
+    const getCoordinates = (regionStr) => {
+      const mainRegion = getMainRegion(regionStr);
+
+      // Try exact match first
+      if (regionCoordinates[regionStr]) {
+        return regionCoordinates[regionStr];
+      }
+
+      // Try main region
+      if (mainRegion && regionCoordinates[mainRegion]) {
+        return regionCoordinates[mainRegion];
+      }
+
+      // Try partial match
+      for (const [key, coords] of Object.entries(regionCoordinates)) {
+        if (regionStr.toLowerCase().includes(key.toLowerCase()) ||
+            key.toLowerCase().includes(regionStr.toLowerCase())) {
+          return coords;
+        }
+      }
+
+      // Default to center of map if no match
+      return { lat: 0, lng: 0 };
+    };
+
+    // Use AI geocoding for precise coordinates (with parallel processing)
+    const mapData = await Promise.all(result.rows.map(async (row) => {
+      // Try AI geocoding first, fallback to static coordinates
+      let coords = await geocodeRegionWithAI(row.region);
+
+      if (!coords) {
+        // Fallback to static coordinates if AI fails
+        coords = getCoordinates(row.region);
+      }
+
+      const paperCount = parseInt(row.paper_count);
+
+      // Generate a topic focus from sample titles or metadata
+      const topicFocus = row.dominant_framework || row.dominant_taxa ||
+                        (row.sample_titles ? row.sample_titles.split(' | ')[0].substring(0, 100) + '...' : 'Research focus');
+
+      // Flatten methods array
+      let methods = [];
+      if (row.all_methods) {
+        try {
+          const methodsData = row.all_methods;
+          if (Array.isArray(methodsData)) {
+            methods = methodsData.flatMap(m => Array.isArray(m) ? m : []);
+          }
+        } catch (e) {
+          methods = [];
+        }
+      }
+
+      return {
+        region: row.region,
+        lat: coords.lat,
+        lng: coords.lng,
+        activity: paperCount,
+        stats: {
+          studies: paperCount,
+          datasets: 0,
+          researchers: 0,
+        },
+        topicFocus,
+        trend: paperCount >= 3 ? 'increasing' : paperCount >= 2 ? 'stable' : 'increasing',
+        taxa: row.dominant_taxa,
+        framework: row.dominant_framework,
+        ecosystem: row.dominant_ecosystem,
+        methods,
+      };
+    }));
+
+    res.json({
+      success: true,
+      count: mapData.length,
+      locations: mapData,
+    });
+  } catch (error) {
+    console.error('Get map data error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch map data',
+    });
+  }
+}
+
+/**
+ * Get database overview statistics
+ * @route GET /api/analytics/database-stats
+ * @query {string} time_range - Optional: 7d, 30d, 90d (default: all time)
+ */
+export async function getDatabaseStats(req, res) {
+  try {
+    const { time_range = 'all' } = req.query;
+
+    // Calculate date filter based on time range
+    let dateFilter = '';
+    let dateFilterPrevious = ''; // For comparison
+
+    if (time_range === '7d') {
+      dateFilter = "AND r.created_at >= NOW() - INTERVAL '7 days'";
+      dateFilterPrevious = "AND r.created_at >= NOW() - INTERVAL '14 days' AND r.created_at < NOW() - INTERVAL '7 days'";
+    } else if (time_range === '30d') {
+      dateFilter = "AND r.created_at >= NOW() - INTERVAL '30 days'";
+      dateFilterPrevious = "AND r.created_at >= NOW() - INTERVAL '60 days' AND r.created_at < NOW() - INTERVAL '30 days'";
+    } else if (time_range === '90d') {
+      dateFilter = "AND r.created_at >= NOW() - INTERVAL '90 days'";
+      dateFilterPrevious = "AND r.created_at >= NOW() - INTERVAL '180 days' AND r.created_at < NOW() - INTERVAL '90 days'";
+    }
+
+    // Get total papers
+    const totalQuery = `
+      SELECT COUNT(*) as total
+      FROM research_items r
+      WHERE 1=1 ${dateFilter}
+    `;
+    const totalResult = await pool.query(totalQuery);
+    const total = parseInt(totalResult.rows[0].total);
+
+    // Get total from previous period for comparison
+    const totalPreviousQuery = time_range !== 'all' ? `
+      SELECT COUNT(*) as total
+      FROM research_items r
+      WHERE 1=1 ${dateFilterPrevious}
+    ` : null;
+    const totalPrevious = totalPreviousQuery ? parseInt((await pool.query(totalPreviousQuery)).rows[0].total) : 0;
+
+    // Get papers with GPS coordinates
+    const gpsQuery = `
+      SELECT COUNT(*) as count
+      FROM research_items r
+      JOIN compass_metadata c ON r.id = c.research_id
+      WHERE c.geo_scope_geom IS NOT NULL ${dateFilter}
+    `;
+    const gpsResult = await pool.query(gpsQuery);
+    const withGPS = parseInt(gpsResult.rows[0].count);
+
+    // Get papers with AI metadata
+    const metadataQuery = `
+      SELECT COUNT(*) as count
+      FROM research_items r
+      JOIN compass_metadata c ON r.id = c.research_id
+      WHERE c.methods IS NOT NULL ${dateFilter}
+    `;
+    const metadataResult = await pool.query(metadataQuery);
+    const withMetadata = parseInt(metadataResult.rows[0].count);
+
+    // Get unique countries (from geo_scope_text)
+    const countriesQuery = `
+      SELECT COUNT(DISTINCT c.geo_scope_text) as count
+      FROM research_items r
+      JOIN compass_metadata c ON r.id = c.research_id
+      WHERE c.geo_scope_text IS NOT NULL
+        AND c.geo_scope_text != '' ${dateFilter}
+    `;
+    const countriesResult = await pool.query(countriesQuery);
+    const countries = parseInt(countriesResult.rows[0].count);
+
+    // Calculate time-specific stats
+    const last7DaysQuery = `
+      SELECT COUNT(*) as count
+      FROM research_items r
+      WHERE r.created_at >= NOW() - INTERVAL '7 days'
+    `;
+    const last7DaysResult = await pool.query(last7DaysQuery);
+    const last7Days = parseInt(last7DaysResult.rows[0].count);
+
+    const last30DaysQuery = `
+      SELECT COUNT(*) as count
+      FROM research_items r
+      WHERE r.created_at >= NOW() - INTERVAL '30 days'
+    `;
+    const last30DaysResult = await pool.query(last30DaysQuery);
+    const last30Days = parseInt(last30DaysResult.rows[0].count);
+
+    res.json({
+      success: true,
+      stats: {
+        total,
+        totalPrevious,
+        withGPS,
+        gpsPercentage: total > 0 ? Math.round((withGPS / total) * 100) : 0,
+        withMetadata,
+        metadataPercentage: total > 0 ? Math.round((withMetadata / total) * 100) : 0,
+        countries,
+        last7Days,
+        last30Days,
+        growth: totalPrevious > 0 ? Math.round(((total - totalPrevious) / totalPrevious) * 100) : 0,
+      },
+    });
+  } catch (error) {
+    console.error('Get database stats error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch database stats',
+    });
+  }
+}
+
+/**
+ * Get latest papers added to database
+ * @route GET /api/analytics/latest-papers
+ * @query {number} limit - Optional: Number of papers to return (default: 20)
+ * @query {string} time_range - Optional: 7d, 30d, 90d (default: 30d)
+ */
+export async function getLatestPapers(req, res) {
+  try {
+    const { limit = 20, time_range = '30d' } = req.query;
+
+    // Calculate date filter based on time range
+    let dateFilter = "AND r.created_at >= NOW() - INTERVAL '30 days'";
+
+    if (time_range === '7d') {
+      dateFilter = "AND r.created_at >= NOW() - INTERVAL '7 days'";
+    } else if (time_range === '90d') {
+      dateFilter = "AND r.created_at >= NOW() - INTERVAL '90 days'";
+    }
+
+    const query = `
+      SELECT
+        r.id,
+        r.title,
+        r.abstract,
+        r.authors,
+        r.year,
+        r.journal,
+        r.doi,
+        r.created_at as added_date,
+        c.ecosystem_type,
+        c.geo_scope_text,
+        c.taxon_scope,
+        c.methods,
+        c.framework_alignment
+      FROM research_items r
+      LEFT JOIN compass_metadata c ON r.id = c.research_id
+      WHERE 1=1 ${dateFilter}
+      ORDER BY r.created_at DESC
+      LIMIT $1
+    `;
+
+    const result = await pool.query(query, [parseInt(limit)]);
+
+    const papers = result.rows.map(row => ({
+      id: row.id,
+      title: row.title,
+      abstract: row.abstract,
+      authors: row.authors,
+      year: row.year,
+      journal: row.journal,
+      doi: row.doi,
+      addedDate: row.added_date,
+      ecosystem: row.ecosystem_type,
+      location: row.geo_scope_text,
+      species: row.taxon_scope ? (Array.isArray(row.taxon_scope) ? row.taxon_scope : []) : [],
+      methods: row.methods?.research_methods || [],
+      frameworks: row.framework_alignment || [],
+    }));
+
+    res.json({
+      success: true,
+      count: papers.length,
+      papers,
+      timeRange: time_range,
+    });
+  } catch (error) {
+    console.error('Get latest papers error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch latest papers',
+    });
+  }
+}
+
+/**
+ * Get temporal trends data for charts
+ * @route GET /api/analytics/temporal-trends
+ * @query {string} metric - Required: 'papers_per_week' | 'ecosystems' | 'methods' | 'frameworks'
+ * @query {string} time_range - Optional: 7d, 30d, 90d (default: 90d)
+ * @query {number} limit - Optional: Limit for top N (default: 5)
+ */
+export async function getTemporalTrends(req, res) {
+  try {
+    const { metric, time_range = '90d', limit = 5 } = req.query;
+
+    if (!metric) {
+      return res.status(400).json({
+        success: false,
+        error: 'metric parameter is required',
+      });
+    }
+
+    // Calculate date filter based on time range
+    let interval = '90 days';
+    let weekInterval = '12 weeks';
+
+    if (time_range === '7d') {
+      interval = '7 days';
+      weekInterval = '1 week';
+    } else if (time_range === '30d') {
+      interval = '30 days';
+      weekInterval = '4 weeks';
+    }
+
+    let query;
+    let queryParams = [];
+
+    switch (metric) {
+      case 'papers_per_week':
+        query = `
+          SELECT
+            DATE_TRUNC('week', r.created_at) as week,
+            COUNT(*) as count
+          FROM research_items r
+          WHERE r.created_at >= NOW() - INTERVAL '${interval}'
+          GROUP BY DATE_TRUNC('week', r.created_at)
+          ORDER BY week ASC
+        `;
+        break;
+
+      case 'ecosystems':
+        query = `
+          SELECT
+            c.ecosystem_type as name,
+            COUNT(*) as count
+          FROM research_items r
+          JOIN compass_metadata c ON r.id = c.research_id
+          WHERE r.created_at >= NOW() - INTERVAL '${interval}'
+            AND c.ecosystem_type IS NOT NULL
+            AND c.ecosystem_type != ''
+          GROUP BY c.ecosystem_type
+          ORDER BY count DESC
+          LIMIT $1
+        `;
+        queryParams = [parseInt(limit)];
+        break;
+
+      case 'methods':
+        query = `
+          SELECT
+            method as name,
+            COUNT(*) as count
+          FROM research_items r
+          JOIN compass_metadata c ON r.id = c.research_id,
+          LATERAL jsonb_array_elements_text(c.methods->'research_methods') as method
+          WHERE r.created_at >= NOW() - INTERVAL '${interval}'
+            AND c.methods IS NOT NULL
+          GROUP BY method
+          ORDER BY count DESC
+          LIMIT $1
+        `;
+        queryParams = [parseInt(limit)];
+        break;
+
+      case 'frameworks':
+        query = `
+          SELECT
+            framework as name,
+            COUNT(*) as count
+          FROM research_items r
+          JOIN compass_metadata c ON r.id = c.research_id,
+          LATERAL jsonb_array_elements_text(c.framework_alignment) as framework
+          WHERE r.created_at >= NOW() - INTERVAL '${interval}'
+            AND c.framework_alignment IS NOT NULL
+            AND c.framework_alignment != '[]'::jsonb
+          GROUP BY framework
+          ORDER BY count DESC
+          LIMIT $1
+        `;
+        queryParams = [parseInt(limit)];
+        break;
+
+      default:
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid metric. Must be one of: papers_per_week, ecosystems, methods, frameworks',
+        });
+    }
+
+    const result = await pool.query(query, queryParams);
+
+    res.json({
+      success: true,
+      metric,
+      timeRange: time_range,
+      data: result.rows,
+    });
+  } catch (error) {
+    console.error('Get temporal trends error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch temporal trends',
+    });
+  }
+}
