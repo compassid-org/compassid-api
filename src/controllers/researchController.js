@@ -1307,16 +1307,40 @@ const naturalLanguageSearch = async (req, res, next) => {
       whereClause += ` AND (${speciesConditions})`;
     }
 
+    // Handle date filtering with month-level precision
+    // If date contains "-" (YYYY-MM format), filter on publication_date
+    // Otherwise, filter on publication_year (YYYY format)
     if (queryParams.year_from) {
-      queryValues.push(parseInt(queryParams.year_from));
-      whereClause += ` AND r.publication_year >= $${paramCount}`;
-      paramCount++;
+      if (queryParams.year_from.includes('-')) {
+        // Month-level filtering: YYYY-MM format
+        // Filter for dates >= first day of specified month
+        queryValues.push(queryParams.year_from + '-01');
+        whereClause += ` AND r.publication_date >= $${paramCount}::date`;
+        paramCount++;
+      } else {
+        // Year-level filtering: YYYY format
+        queryValues.push(parseInt(queryParams.year_from));
+        whereClause += ` AND r.publication_year >= $${paramCount}`;
+        paramCount++;
+      }
     }
 
     if (queryParams.year_to) {
-      queryValues.push(parseInt(queryParams.year_to));
-      whereClause += ` AND r.publication_year <= $${paramCount}`;
-      paramCount++;
+      if (queryParams.year_to.includes('-')) {
+        // Month-level filtering: YYYY-MM format
+        // Filter for dates <= last day of specified month
+        // Calculate last day by going to first day of next month and subtracting 1 day
+        const [year, month] = queryParams.year_to.split('-');
+        const nextMonth = parseInt(month) === 12 ? `${parseInt(year) + 1}-01` : `${year}-${String(parseInt(month) + 1).padStart(2, '0')}`;
+        queryValues.push(nextMonth + '-01');
+        whereClause += ` AND r.publication_date < $${paramCount}::date`;
+        paramCount++;
+      } else {
+        // Year-level filtering: YYYY format
+        queryValues.push(parseInt(queryParams.year_to));
+        whereClause += ` AND r.publication_year <= $${paramCount}`;
+        paramCount++;
+      }
     }
 
     // Build main query with WHERE clause

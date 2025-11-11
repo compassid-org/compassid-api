@@ -54,7 +54,7 @@ Available filters:
 - conservationActions: Array of conservation actions (Protected Areas, Legislation/Policy, Monitoring, Habitat Restoration, Community-Based Conservation, Species Reintroduction, Ex-situ Conservation, Education/Awareness, Sustainable Use, Anti-Poaching, Invasive Species Control, Climate Adaptation, Payments for Ecosystem Services, Traditional Ecological Knowledge, Indigenous-Led Conservation, Ethnobotany, Traditional Fire Management, Sacred Natural Sites, Community Conserved Areas, etc.)
 - frameworks: Array of policy frameworks (SDG 1-17, CBD, Paris Agreement, Ramsar Convention, CITES, IUCN Red List, Aichi Targets, Kunming-Montreal Framework, etc.)
 - studyTypes: Array of study types (Field Study, Literature Review, Meta-Analysis, Modeling Study, Remote Sensing Study, Laboratory Study, Mixed Methods)
-- dateRange: Object with start and/or end dates in YYYY format (e.g., {"start": "2020", "end": "2024"})
+- dateRange: Object with start and/or end dates in YYYY or YYYY-MM format (e.g., {"start": "2020", "end": "2024"}, {"start": "2025-10", "end": "2025-10"})
 - authors: Array of author names
 - sortBy: String indicating field to sort by (citations, date, relevance)
 - sortOrder: String indicating direction (asc or desc)
@@ -95,6 +95,9 @@ DATE RANGE INTELLIGENCE - Understand temporal references:
 Relative: "last 5 years" → calculate from current year 2025
 Absolute: "from 2020 to 2024", "published in 2023", "after 2020", "before 2015"
 Periods: "last decade" (2015-2025), "this century" (2000-2025), "recent years" (2020-2025)
+Month-specific: "October 2025" → {"start": "2025-10", "end": "2025-10"}, "in May 2024" → {"start": "2024-05", "end": "2024-05"}
+CRITICAL: When user specifies a SPECIFIC MONTH, use YYYY-MM format (e.g., "2025-10" for October 2025). Both start and end should be the same month.
+Month mapping: January=01, February=02, March=03, April=04, May=05, June=06, July=07, August=08, September=09, October=10, November=11, December=12
 
 EXCLUSION INTELLIGENCE - Understand negative/exclusion phrases:
 "NOT in", "excluding", "outside of", "except", "other than", "besides" → use excludedLocations
