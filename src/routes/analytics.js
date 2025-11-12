@@ -29,8 +29,14 @@ router.get('/latest-papers', analyticsController.getLatestPapers);
 // Get temporal trends data for charts
 router.get('/temporal-trends', analyticsController.getTemporalTrends);
 
-// Get research gaps analysis
+// AI-Powered Insights: Research Gaps Analysis (Kosmos-inspired)
 router.get('/research-gaps', analyticsController.getResearchGaps);
+
+// AI-Powered Insights: Conservation Strategy Synthesis (Kosmos-inspired)
+router.post('/synthesize-strategy', analyticsController.synthesizeStrategy);
+
+// AI-Powered Insights: Trending Discoveries (Kosmos-inspired)
+router.get('/trending-discoveries', analyticsController.getTrendingDiscoveries);
 
 // Get predictive analytics and trend forecasts
 router.get('/predictions', analyticsController.getPredictiveAnalytics);

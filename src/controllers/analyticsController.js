@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import pool from '../../config/database.js';
+import { analyzeResearchGaps, synthesizeConservationStrategy, identifyTrendingDiscoveries } from '../../services/aiInsightsService.js';
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
@@ -1105,167 +1106,6 @@ export async function getTemporalTrends(req, res) {
 }
 
 /**
- * Get research gaps - identify underresearched areas
- * GET /api/analytics/research-gaps
- */
-export async function getResearchGaps(req, res) {
-  try {
-    const { min_papers = 5 } = req.query;
-    const minPapers = parseInt(min_papers);
-
-    // Run all gap queries in parallel
-    const [taxaResult, regionsResult, frameworksResult, ecosystemsResult, methodsResult] = await Promise.all([
-      // Underresearched taxa
-      pool.query(`
-        WITH taxa_counts AS (
-          SELECT
-            (jsonb_array_elements(c.taxon_scope)->>'common_name') as taxon,
-            COUNT(DISTINCT r.id) as paper_count,
-            ARRAY_AGG(DISTINCT c.geo_scope_text) FILTER (WHERE c.geo_scope_text IS NOT NULL) as regions
-          FROM research_items r
-          JOIN compass_metadata c ON r.id = c.research_id
-          WHERE c.taxon_scope IS NOT NULL
-            AND c.taxon_scope != '[]'::jsonb
-          GROUP BY taxon
-        )
-        SELECT
-          taxon as name,
-          paper_count,
-          array_length(regions, 1) as region_count,
-          'Needs more research - only ' || paper_count || ' papers found' as gap_description
-        FROM taxa_counts
-        WHERE paper_count < $1 AND taxon IS NOT NULL
-        ORDER BY paper_count ASC
-        LIMIT 20
-      `, [minPapers]),
-
-      // Geographic gaps
-      pool.query(`
-        WITH region_counts AS (
-          SELECT
-            c.geo_scope_text as region,
-            COUNT(DISTINCT r.id) as paper_count,
-            COUNT(DISTINCT c.ecosystem_type) as ecosystem_count
-          FROM research_items r
-          JOIN compass_metadata c ON r.id = c.research_id
-          WHERE c.geo_scope_text IS NOT NULL
-            AND c.geo_scope_text != ''
-          GROUP BY c.geo_scope_text
-        )
-        SELECT
-          region as name,
-          paper_count,
-          ecosystem_count,
-          'Geographic gap - only ' || paper_count || ' papers across ' || ecosystem_count || ' ecosystems' as gap_description
-        FROM region_counts
-        WHERE paper_count < $1
-        ORDER BY paper_count ASC
-        LIMIT 20
-      `, [minPapers]),
-
-      // Framework gaps
-      pool.query(`
-        WITH framework_counts AS (
-          SELECT
-            jsonb_array_elements_text(c.framework_alignment) as framework,
-            COUNT(DISTINCT r.id) as paper_count,
-            COUNT(DISTINCT c.geo_scope_text) as region_count
-          FROM research_items r
-          JOIN compass_metadata c ON r.id = c.research_id
-          WHERE c.framework_alignment IS NOT NULL
-            AND c.framework_alignment != '[]'::jsonb
-          GROUP BY framework
-        )
-        SELECT
-          framework as name,
-          paper_count,
-          region_count,
-          'Framework gap - only ' || paper_count || ' papers in ' || region_count || ' regions' as gap_description
-        FROM framework_counts
-        WHERE paper_count < $1
-        ORDER BY paper_count ASC
-        LIMIT 20
-      `, [minPapers]),
-
-      // Ecosystem gaps
-      pool.query(`
-        WITH ecosystem_counts AS (
-          SELECT
-            c.ecosystem_type as ecosystem,
-            COUNT(DISTINCT r.id) as paper_count,
-            COUNT(DISTINCT c.geo_scope_text) as region_count
-          FROM research_items r
-          JOIN compass_metadata c ON r.id = c.research_id
-          WHERE c.ecosystem_type IS NOT NULL
-            AND c.ecosystem_type != ''
-          GROUP BY c.ecosystem_type
-        )
-        SELECT
-          ecosystem as name,
-          paper_count,
-          region_count,
-          'Ecosystem gap - only ' || paper_count || ' papers across ' || region_count || ' regions' as gap_description
-        FROM ecosystem_counts
-        WHERE paper_count < $1
-        ORDER BY paper_count ASC
-        LIMIT 20
-      `, [minPapers]),
-
-      // Research method gaps
-      pool.query(`
-        WITH method_counts AS (
-          SELECT
-            jsonb_array_elements_text(c.methods->'research_methods') as method,
-            COUNT(DISTINCT r.id) as paper_count,
-            COUNT(DISTINCT c.ecosystem_type) as ecosystem_count
-          FROM research_items r
-          JOIN compass_metadata c ON r.id = c.research_id
-          WHERE c.methods->'research_methods' IS NOT NULL
-          GROUP BY method
-        )
-        SELECT
-          method as name,
-          paper_count,
-          ecosystem_count,
-          'Method gap - only ' || paper_count || ' papers using this method across ' || ecosystem_count || ' ecosystems' as gap_description
-        FROM method_counts
-        WHERE paper_count < $1 AND method IS NOT NULL
-        ORDER BY paper_count ASC
-        LIMIT 20
-      `, [minPapers])
-    ]);
-
-    res.json({
-      success: true,
-      threshold: minPapers,
-      gaps: {
-        taxa: taxaResult.rows,
-        regions: regionsResult.rows,
-        frameworks: frameworksResult.rows,
-        ecosystems: ecosystemsResult.rows,
-        methods: methodsResult.rows
-      },
-      summary: {
-        total_gaps: taxaResult.rows.length + regionsResult.rows.length +
-                     frameworksResult.rows.length + ecosystemsResult.rows.length +
-                     methodsResult.rows.length,
-        taxa_gaps: taxaResult.rows.length,
-        region_gaps: regionsResult.rows.length,
-        framework_gaps: frameworksResult.rows.length,
-        ecosystem_gaps: ecosystemsResult.rows.length,
-        method_gaps: methodsResult.rows.length
-      }
-    });
-  } catch (error) {
-    console.error('Get research gaps error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch research gaps',
-    });
-  }
-}
-
-/**
  * Get predictive analytics - identify emerging trends and forecast future research
  * GET /api/analytics/predictions
  */
@@ -1992,6 +1832,226 @@ export async function getWeeklyHighlights(req, res) {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch weekly highlights',
+    });
+  }
+}
+
+/**
+ * AI-Powered Insights: Research Gaps Analysis
+ * @route GET /api/analytics/research-gaps
+ * @query {boolean} premium - Whether user has premium access
+ */
+export async function getResearchGaps(req, res) {
+  try {
+    const { premium = 'false' } = req.query;
+    const isPremium = premium === 'true';
+
+    // Fetch papers with metadata for analysis (limit to recent 2000 papers for performance)
+    const result = await pool.query(`
+      SELECT
+        r.id,
+        r.title,
+        r.authors,
+        r.publication_year,
+        c.methods,
+        c.ecosystem_type,
+        c.taxon_scope,
+        c.geo_scope_text
+      FROM research_items r
+      INNER JOIN compass_metadata c ON r.id = c.research_id
+      WHERE c.methods IS NOT NULL OR c.ecosystem_type IS NOT NULL OR c.taxon_scope IS NOT NULL OR c.geo_scope_text IS NOT NULL
+      ORDER BY r.created_at DESC
+      LIMIT 2000
+    `);
+
+    console.log(`[Research Gaps] Analyzing ${result.rows.length} papers...`);
+
+    // Call AI analysis service
+    const analysis = await analyzeResearchGaps(result.rows);
+
+    // Freemium logic: limit to 3 gaps for free users
+    if (!isPremium) {
+      const totalGaps = analysis.gaps.length;
+      analysis.gaps = analysis.gaps.slice(0, 3);
+      analysis.preview = true;
+      analysis.totalAvailable = totalGaps;
+      analysis.message = `Showing 3 of ${totalGaps} research gaps. Upgrade to Premium to see all insights.`;
+    }
+
+    console.log(`[Research Gaps] Analysis complete. Cost: $${analysis.cost.toFixed(4)}`);
+
+    res.json(analysis);
+
+  } catch (error) {
+    console.error('Error getting research gaps:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to analyze research gaps',
+      details: error.message
+    });
+  }
+}
+
+/**
+ * AI-Powered Insights: Conservation Strategy Synthesis
+ * @route POST /api/analytics/synthesize-strategy
+ * @body {string} query - Natural language query for strategy
+ * @body {boolean} premium - Whether user has premium access
+ */
+export async function synthesizeStrategy(req, res) {
+  try {
+    const { query, premium = false } = req.body;
+
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        error: 'Query parameter is required'
+      });
+    }
+
+    const isPremium = premium === true;
+
+    // Use existing natural language search to find relevant papers
+    const { parseNaturalLanguageQuery } = await import('../../services/naturalLanguageSearchService.js');
+    const parsedQuery = await parseNaturalLanguageQuery(query);
+
+    // Fetch relevant papers based on parsed filters
+    // For simplicity, we'll do a keyword search on the query
+    const searchResult = await pool.query(`
+      SELECT
+        r.id,
+        r.title,
+        r.authors,
+        r.publication_year,
+        r.journal,
+        r.citations,
+        c.methods,
+        c.ecosystem_type,
+        c.taxon_scope,
+        c.geo_scope_text,
+        c.framework_alignment
+      FROM research_items r
+      INNER JOIN compass_metadata c ON r.id = c.research_id
+      WHERE
+        r.title ILIKE $1
+        OR r.abstract ILIKE $1
+        OR c.methods::text ILIKE $1
+        OR c.ecosystem_type ILIKE $1
+        OR c.geo_scope_text ILIKE $1
+      ORDER BY r.citations DESC
+      LIMIT 50
+    `, [`%${query}%`]);
+
+    console.log(`[Strategy Synthesis] Found ${searchResult.rows.length} relevant papers for: "${query}"`);
+
+    if (searchResult.rows.length === 0) {
+      return res.json({
+        success: false,
+        error: 'No relevant papers found for this query. Try a different search term.'
+      });
+    }
+
+    // Call AI synthesis service
+    const strategy = await synthesizeConservationStrategy(query, searchResult.rows);
+
+    // Freemium logic: limit to top 3 strategies for free users
+    if (!isPremium) {
+      const totalStrategies = strategy.strategies?.length || 0;
+      if (strategy.strategies && strategy.strategies.length > 3) {
+        strategy.strategies = strategy.strategies.slice(0, 3);
+        strategy.preview = true;
+        strategy.totalAvailable = totalStrategies;
+        strategy.message = `Showing 3 of ${totalStrategies} strategies. Upgrade to Premium for complete analysis.`;
+      }
+    }
+
+    console.log(`[Strategy Synthesis] Complete. Cost: $${strategy.cost.toFixed(4)}`);
+
+    res.json(strategy);
+
+  } catch (error) {
+    console.error('Error synthesizing strategy:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to synthesize conservation strategy',
+      details: error.message
+    });
+  }
+}
+
+/**
+ * AI-Powered Insights: Trending Discoveries
+ * @route GET /api/analytics/trending-discoveries
+ * @query {boolean} premium - Whether user has premium access
+ */
+export async function getTrendingDiscoveries(req, res) {
+  try {
+    const { premium = 'false' } = req.query;
+    const isPremium = premium === 'true';
+
+    // Fetch recent papers (last 90 days)
+    const recentResult = await pool.query(`
+      SELECT
+        r.id,
+        r.title,
+        r.publication_year,
+        c.methods,
+        c.taxon_scope,
+        c.ecosystem_type,
+        c.geo_scope_text
+      FROM research_items r
+      INNER JOIN compass_metadata c ON r.id = c.research_id
+      WHERE r.publication_date >= NOW() - INTERVAL '90 days'
+        AND (c.methods IS NOT NULL OR c.taxon_scope IS NOT NULL OR c.ecosystem_type IS NOT NULL)
+      ORDER BY r.publication_date DESC
+      LIMIT 500
+    `);
+
+    // Fetch historical papers (1-3 years ago for baseline comparison)
+    const historicalResult = await pool.query(`
+      SELECT
+        r.id,
+        r.title,
+        r.publication_year,
+        c.methods,
+        c.taxon_scope,
+        c.ecosystem_type,
+        c.geo_scope_text
+      FROM research_items r
+      INNER JOIN compass_metadata c ON r.id = c.research_id
+      WHERE r.publication_date >= NOW() - INTERVAL '3 years'
+        AND r.publication_date < NOW() - INTERVAL '1 year'
+        AND (c.methods IS NOT NULL OR c.taxon_scope IS NOT NULL OR c.ecosystem_type IS NOT NULL)
+      ORDER BY r.publication_date DESC
+      LIMIT 1000
+    `);
+
+    console.log(`[Trending Discoveries] Analyzing ${recentResult.rows.length} recent papers vs ${historicalResult.rows.length} historical papers...`);
+
+    // Call AI trending analysis service
+    const trends = await identifyTrendingDiscoveries(recentResult.rows, historicalResult.rows);
+
+    // Freemium logic: limit to 3 discoveries for free users
+    if (!isPremium) {
+      const totalDiscoveries = trends.discoveries?.length || 0;
+      if (trends.discoveries && trends.discoveries.length > 3) {
+        trends.discoveries = trends.discoveries.slice(0, 3);
+        trends.preview = true;
+        trends.totalAvailable = totalDiscoveries;
+        trends.message = `Showing 3 of ${totalDiscoveries} trending discoveries. Upgrade to Premium to see all.`;
+      }
+    }
+
+    console.log(`[Trending Discoveries] Analysis complete. Cost: $${trends.cost.toFixed(4)}`);
+
+    res.json(trends);
+
+  } catch (error) {
+    console.error('Error identifying trending discoveries:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to identify trending discoveries',
+      details: error.message
     });
   }
 }
