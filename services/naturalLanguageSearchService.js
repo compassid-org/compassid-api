@@ -28,20 +28,26 @@ async function parseNaturalLanguageQuery(naturalQuery) {
 
 BE FLEXIBLE AND CREATIVE: Users express themselves in countless ways. Your goal is to understand what they want, not match specific keyword patterns.
 
-FILTER PRIORITIZATION RULE (CRITICAL):
+FILTER PRIORITIZATION RULE (CRITICAL - STRICTLY ENFORCE THIS):
 When a term matches a SPECIFIC filter category (methods, species, ecosystems, locations, threatTypes, conservationActions, frameworks, studyTypes), put it ONLY in that specific category, NOT in keywords.
+
+⚠️ WARNING: NEVER put the same concept in BOTH a specific filter AND keywords! This creates overly restrictive AND logic that returns zero results.
 
 Only use keywords for:
 - General search terms that don't match any specific category
-- Abstract concepts like "restoration", "conservation", "impacts", "success"
+- Abstract concepts like "restoration", "conservation", "impacts", "success", "research", "study"
 - Descriptive phrases that aren't specific entities
 
-Examples:
-✓ "camera traps" → methods: ["Camera Traps"], keywords: []
-✓ "tigers in India" → species: ["Tiger"], locations: ["India"], keywords: []
-✓ "coral reef restoration" → keywords: ["coral reef", "restoration"]
-✓ "habitat loss affecting elephants" → species: ["Elephant"], threatTypes: ["Habitat Loss"], keywords: []
-✗ "camera traps" → methods: ["Camera Traps"], keywords: ["camera traps"] ← WRONG! Don't duplicate!
+STRICT EXAMPLES - Follow these patterns EXACTLY:
+✓ "mammals" → species: ["Mammals"], keywords: [] ← CORRECT! "mammals" is ONLY in species
+✓ "camera traps" → methods: ["Camera Traps"], keywords: [] ← CORRECT! Not in keywords
+✓ "tigers in India" → species: ["Tiger"], locations: ["India"], keywords: [] ← CORRECT! No duplication
+✓ "mammal research" → species: ["Mammals"], keywords: [] ← CORRECT! "research" is too generic, omit it
+✓ "show me mammals research" → species: ["Mammals"], keywords: [] ← CORRECT! Focus on the entity
+✓ "coral reef restoration" → keywords: ["coral reef", "restoration"] ← CORRECT! Not a specific taxonomy
+✓ "habitat loss affecting elephants" → species: ["Elephant"], threatTypes: ["Habitat Loss"], keywords: [] ← CORRECT! No duplication
+✗ "mammals" → species: ["Mammals"], keywords: ["mammals"] ← WRONG! Duplicated!
+✗ "show me mammals research" → species: ["Mammals"], keywords: ["mammals", "research"] ← WRONG! Duplicated "mammals"!
 
 Available filters:
 - keywords: Array of general search terms
@@ -60,8 +66,9 @@ Available filters:
 - sortOrder: String indicating direction (asc or desc)
 - limit: Number indicating max results to return
 
-GEOGRAPHIC INTELLIGENCE - Expand continent/region queries to include ALL sub-regions and countries:
-When a user searches for a CONTINENT or LARGE REGION, include ALL countries, islands, and sub-regions within it:
+GEOGRAPHIC INTELLIGENCE - CRITICAL FOR ROBUST SEARCH:
+
+1. EXPAND CONTINENTS/REGIONS to include ALL sub-regions and countries:
 
 Africa → ["Africa", "Sub-Saharan Africa", "Madagascar", "East Africa", "West Africa", "Central Africa", "Southern Africa", "North Africa", "Kenya", "Tanzania", "South Africa", "Ethiopia", "Nigeria", "Democratic Republic of Congo", "Uganda", "Rwanda", "Mozambique", "Zimbabwe", "Botswana", "Namibia", "Senegal", "Ghana", "Cameroon", "Angola", "Zambia", "Malawi"]
 
@@ -77,7 +84,33 @@ Oceania → ["Oceania", "Australia", "New Zealand", "Papua New Guinea", "Fiji", 
 
 Arctic → ["Arctic", "Greenland", "Northern Canada", "Alaska", "Northern Russia", "Svalbard"]
 
-CRITICAL: When a user says "Africa", "Asia", etc., they want papers from ANYWHERE in that continent, including islands and all countries. Always expand continent-level queries!
+2. EXPAND COUNTRY NAME VARIATIONS - CRITICAL!!! When users mention a country, include ALL common name variations:
+
+Saudi Arabia → ["Saudi Arabia", "Kingdom of Saudi Arabia", "KSA", "Saudi"]
+United States → ["United States", "USA", "U.S.A.", "US", "America", "United States of America"]
+United Kingdom → ["United Kingdom", "UK", "U.K.", "Great Britain", "Britain", "England", "Scotland", "Wales", "Northern Ireland"]
+United Arab Emirates → ["United Arab Emirates", "UAE", "U.A.E.", "Emirates"]
+Democratic Republic of Congo → ["Democratic Republic of Congo", "DRC", "DR Congo", "Congo-Kinshasa", "Congo (DRC)"]
+Republic of Congo → ["Republic of Congo", "Congo-Brazzaville", "Congo (Republic)"]
+South Africa → ["South Africa", "RSA", "Republic of South Africa"]
+North Korea → ["North Korea", "DPRK", "Democratic People's Republic of Korea"]
+South Korea → ["South Korea", "ROK", "Republic of Korea", "Korea"]
+Russia → ["Russia", "Russian Federation", "USSR" (for historical papers)]
+China → ["China", "People's Republic of China", "PRC"]
+Tanzania → ["Tanzania", "United Republic of Tanzania"]
+Myanmar → ["Myanmar", "Burma"]
+Ivory Coast → ["Ivory Coast", "Côte d'Ivoire"]
+Czech Republic → ["Czech Republic", "Czechia"]
+
+3. EXPAND REGION VARIATIONS:
+Middle East → ["Middle East", "Arabian Peninsula", "Gulf States", "Saudi Arabia", "UAE", "Qatar", "Kuwait", "Bahrain", "Oman", "Yemen", "Jordan", "Lebanon", "Syria", "Iraq", "Iran", "Israel", "Palestine"]
+Caribbean → ["Caribbean", "West Indies", "Greater Antilles", "Lesser Antilles", "Jamaica", "Cuba", "Haiti", "Dominican Republic", "Puerto Rico", "Trinidad and Tobago", "Barbados"]
+
+CRITICAL RULES:
+- When a user says "Africa", "Asia", etc. → they want papers from ANYWHERE in that continent, including islands and all countries
+- When a user says "Saudi Arabia" → include "Kingdom of Saudi Arabia", "KSA", "Saudi" in the search
+- When a user says "USA" or "United States" → include ALL variations
+- ALWAYS think: "What other names might this place be called in research papers?"
 
 SORTING INTELLIGENCE - Understand intent from ANY phrasing:
 Citations (descending): "highest cited", "most cited", "top cited", "best cited", "most influential", "most impactful", "with most citations", "greatest impact", "top impact", etc.
