@@ -21,6 +21,7 @@ import messagesRouter from './src/routes/messages.js';
 import notificationsRouter from './src/routes/notifications.js';
 import interestsRouter from './src/routes/interests.js';
 import analyticsRouter from './src/routes/analytics.js';
+import creditsRouter from './src/routes/credits.js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { authenticateToken } = require('./src/middleware/auth.cjs');
@@ -537,6 +538,7 @@ app.get('/api/usage/ai-queries', async (req, res) => {
 app.use('/api/papers', papersRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/stripe', stripeRouter);
+app.use('/api/credits', creditsRouter);
 app.use('/api/research', researchRouter);
 app.use('/api', followingRouter); // includes /api/users/:id/follow
 app.use('/api/messages', messagesRouter);

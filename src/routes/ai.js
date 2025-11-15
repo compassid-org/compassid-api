@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Anthropic = require('@anthropic-ai/sdk');
+const { authenticateToken } = require('../middleware/auth.cjs');
+const UsageLimitMiddleware = require('../middleware/usageLimit');
 
 // Import Claude service (check both old and new locations)
 let generateResearchSuggestions, extractComprehensiveMetadata;
@@ -34,7 +36,7 @@ try {
  * Generate comprehensive metadata for research papers (location + all tags)
  * This endpoint replaces the old simple suggestions with comprehensive extraction
  */
-router.post('/suggestions', async (req, res) => {
+router.post('/suggestions', authenticateToken, UsageLimitMiddleware.checkUsageLimit('ai_analysis'), async (req, res) => {
   try {
     const { title, abstract, existingTags } = req.body;
 
@@ -212,7 +214,7 @@ router.get('/crossref/search', async (req, res) => {
  * Conversational AI search assistant for natural language queries
  * with dynamic map control capabilities
  */
-router.post('/search-assistant', async (req, res) => {
+router.post('/search-assistant', authenticateToken, UsageLimitMiddleware.checkUsageLimit('ai_search'), async (req, res) => {
   try {
     const { message, conversationHistory = [], currentPapers = [] } = req.body;
 

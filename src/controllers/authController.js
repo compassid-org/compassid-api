@@ -117,7 +117,7 @@ const getProfile = async (req, res, next) => {
       `SELECT id, email, compass_id, orcid_id, first_name, last_name, institution,
               subscription, subscription_status, is_admin, created_at,
               bio, position, department, location, website, google_scholar_url, research_interests,
-              employment, education
+              employment, education, avatar_url
        FROM users WHERE id = $1`,
       [req.user.userId]
     );
@@ -132,9 +132,21 @@ const getProfile = async (req, res, next) => {
     );
 
     const user = result.rows[0];
+
+    // Normalize array fields - convert empty objects or null to empty arrays
+    const normalizeArrayField = (field) => {
+      if (!field || (typeof field === 'object' && !Array.isArray(field) && Object.keys(field).length === 0)) {
+        return [];
+      }
+      return Array.isArray(field) ? field : [];
+    };
+
     res.json({
       user: {
         ...user,
+        employment: normalizeArrayField(user.employment),
+        education: normalizeArrayField(user.education),
+        research_interests: normalizeArrayField(user.research_interests),
         subscription_tier: user.subscription, // map subscription column to subscription_tier for frontend
         subscription: undefined // remove the subscription field
       },
@@ -166,6 +178,16 @@ const updateProfile = async (req, res, next) => {
   } = req.body;
 
   try {
+    // Normalize array fields before saving - ensure arrays stay as arrays
+    const normalizeForSave = (field) => {
+      if (!field) return [];
+      return Array.isArray(field) ? field : [];
+    };
+
+    const normalizedEmployment = normalizeForSave(employment);
+    const normalizedEducation = normalizeForSave(education);
+    const normalizedResearchInterests = normalizeForSave(research_interests);
+
     // Update profile in database (works for both regular users and admin)
     const result = await pool.query(
       `UPDATE users
@@ -188,7 +210,7 @@ const updateProfile = async (req, res, next) => {
        RETURNING id, email, compass_id, first_name, last_name, institution, orcid_id,
                  bio, position, department, location, website, google_scholar_url, research_interests, avatar_url,
                  employment, education, subscription, subscription_status, is_admin`,
-      [first_name, last_name, institution, orcid_id, bio, position, department, location, website, google_scholar_url, research_interests, avatar_url, employment, education, req.user.userId]
+      [first_name, last_name, institution, orcid_id, bio, position, department, location, website, google_scholar_url, JSON.stringify(normalizedResearchInterests), avatar_url, JSON.stringify(normalizedEmployment), JSON.stringify(normalizedEducation), req.user.userId]
     );
 
     if (result.rows.length === 0) {
@@ -196,10 +218,22 @@ const updateProfile = async (req, res, next) => {
     }
 
     const user = result.rows[0];
+
+    // Normalize array fields on return
+    const normalizeArrayField = (field) => {
+      if (!field || (typeof field === 'object' && !Array.isArray(field) && Object.keys(field).length === 0)) {
+        return [];
+      }
+      return Array.isArray(field) ? field : [];
+    };
+
     res.json({
       message: 'Profile updated successfully',
       user: {
         ...user,
+        employment: normalizeArrayField(user.employment),
+        education: normalizeArrayField(user.education),
+        research_interests: normalizeArrayField(user.research_interests),
         subscription_tier: user.subscription, // map subscription column to subscription_tier for frontend
         subscription: undefined // remove the subscription field
       }
@@ -222,4 +256,46 @@ const logout = async (req, res) => {
   res.json({ message: 'Logged out successfully' });
 };
 
-module.exports = { register, login, logout, getProfile, updateProfile };
+// Upload avatar
+const uploadAvatar = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No file uploaded'
+      });
+    }
+
+    // Generate the URL for the uploaded file
+    const avatarUrl = `${req.protocol}://${req.get('host')}/uploads/avatars/${req.file.filename}`;
+
+    // Update user's avatar_url in database
+    const result = await pool.query(
+      `UPDATE users
+       SET avatar_url = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING avatar_url`,
+      [avatarUrl, req.user.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    logger.info(`Avatar uploaded for user ${req.user.userId}: ${avatarUrl}`);
+
+    res.json({
+      success: true,
+      avatarUrl: result.rows[0].avatar_url,
+      message: 'Avatar uploaded successfully'
+    });
+  } catch (error) {
+    logger.error('Upload avatar error:', error);
+    next(error);
+  }
+};
+
+module.exports = { register, login, logout, getProfile, updateProfile, uploadAvatar };

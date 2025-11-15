@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const aiGrantWritingController = require('../controllers/aiGrantWritingController');
 const { authenticateToken } = require('../middleware/auth.cjs');
+const UsageLimitMiddleware = require('../middleware/usageLimit');
 
 // All routes require authentication
 router.use(authenticateToken);
@@ -16,7 +17,7 @@ router.get('/applications/:id', aiGrantWritingController.getApplication);
 router.put('/applications/:id', aiGrantWritingController.updateApplication);
 
 // AI assistance
-router.post('/generate', aiGrantWritingController.generateContent);
+router.post('/generate', UsageLimitMiddleware.checkUsageLimit('ai_grant_writing'), aiGrantWritingController.generateContent);
 
 // Writing tips
 router.get('/tips', aiGrantWritingController.getWritingTips);

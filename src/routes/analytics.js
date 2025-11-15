@@ -1,5 +1,7 @@
 import express from 'express';
 import * as analyticsController from '../controllers/analyticsController.js';
+import { authenticateToken } from '../middleware/auth.cjs';
+import UsageLimitMiddleware from '../middleware/usageLimit.js';
 
 const router = express.Router();
 
@@ -30,10 +32,10 @@ router.get('/latest-papers', analyticsController.getLatestPapers);
 router.get('/temporal-trends', analyticsController.getTemporalTrends);
 
 // AI-Powered Insights: Research Gaps Analysis (Kosmos-inspired)
-router.get('/research-gaps', analyticsController.getResearchGaps);
+router.get('/research-gaps', authenticateToken, UsageLimitMiddleware.checkUsageLimit('ai_analysis'), analyticsController.getResearchGaps);
 
 // AI-Powered Insights: Conservation Strategy Synthesis (Kosmos-inspired)
-router.post('/synthesize-strategy', analyticsController.synthesizeStrategy);
+router.post('/synthesize-strategy', authenticateToken, UsageLimitMiddleware.checkUsageLimit('ai_synthesis'), analyticsController.synthesizeStrategy);
 
 // AI-Powered Insights: Trending Discoveries (Kosmos-inspired)
 router.get('/trending-discoveries', analyticsController.getTrendingDiscoveries);

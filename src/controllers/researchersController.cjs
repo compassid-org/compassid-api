@@ -57,7 +57,8 @@ const getResearcherProfile = async (req, res, next) => {
     const profileQuery = await pool.query(`
       SELECT
         id, email, first_name, last_name, institution, orcid_id, created_at, compass_id,
-        position, department, bio, location, website, research_interests, avatar_url
+        position, department, bio, location, website, research_interests, avatar_url,
+        employment, education, google_scholar_url
       FROM users
       WHERE ${isUUID ? 'id' : 'compass_id'} = $1
     `, [id]);
@@ -68,6 +69,17 @@ const getResearcherProfile = async (req, res, next) => {
 
     const researcher = profileQuery.rows[0];
     const userId = researcher.id; // Use the actual user ID from the database
+
+    // Normalize array fields - convert empty objects or null to empty arrays
+    const normalizeArrayField = (field) => {
+      console.log('[DEBUG] normalizeArrayField called with:', field, 'Type:', typeof field, 'IsArray:', Array.isArray(field));
+      if (!field || (typeof field === 'object' && !Array.isArray(field) && Object.keys(field).length === 0)) {
+        console.log('[DEBUG] Converting to empty array');
+        return [];
+      }
+      console.log('[DEBUG] Returning as-is');
+      return Array.isArray(field) ? field : [];
+    };
 
     const researchQuery = await pool.query(`
       SELECT
@@ -110,7 +122,10 @@ const getResearcherProfile = async (req, res, next) => {
     res.json({
       researcher: {
         ...researcher,
-        email: undefined
+        email: undefined,
+        employment: normalizeArrayField(researcher.employment),
+        education: normalizeArrayField(researcher.education),
+        research_interests: normalizeArrayField(researcher.research_interests)
       },
       research: researchQuery.rows,
       frameworks: frameworksQuery.rows,

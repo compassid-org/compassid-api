@@ -1473,6 +1473,462 @@ const naturalLanguageSearch = async (req, res, next) => {
   }
 };
 
+// ============================================================================
+// PAPER CLAIMING SYSTEM
+// ============================================================================
+
+/**
+ * Claim a paper as your own
+ * POST /research/:id/claim
+ */
+const claimPaper = async (req, res, next) => {
+  try {
+    const { id: researchId } = req.params;
+    const userId = req.user.id;
+    const { claim_notes, orcid_id } = req.body;
+
+    // Check if paper exists
+    const paperResult = await pool.query(
+      'SELECT id, title, user_id, authors FROM research_items WHERE id = $1',
+      [researchId]
+    );
+
+    if (paperResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Paper not found' });
+    }
+
+    const paper = paperResult.rows[0];
+
+    // Check if paper is already claimed
+    if (paper.user_id) {
+      return res.status(400).json({
+        error: 'Paper already claimed',
+        message: 'This paper has already been claimed by another researcher'
+      });
+    }
+
+    // Check if user has already submitted a claim for this paper
+    const existingClaim = await pool.query(
+      'SELECT id, claim_status FROM paper_claims WHERE research_id = $1 AND claimant_id = $2',
+      [researchId, userId]
+    );
+
+    if (existingClaim.rows.length > 0) {
+      const claim = existingClaim.rows[0];
+      return res.status(400).json({
+        error: 'Claim already exists',
+        message: `You have already submitted a claim for this paper (status: ${claim.claim_status})`
+      });
+    }
+
+    // Attempt automatic verification
+    let verificationMethod = null;
+    let verificationData = {};
+    let claimStatus = 'pending';
+
+    // Check ORCID match
+    if (orcid_id && paper.authors) {
+      const authorsJson = typeof paper.authors === 'string'
+        ? JSON.parse(paper.authors)
+        : paper.authors;
+
+      const orcidMatch = authorsJson.some(author =>
+        author.orcid && author.orcid === orcid_id
+      );
+
+      if (orcidMatch) {
+        verificationMethod = 'orcid_match';
+        verificationData = { orcid_id, matched: true };
+        claimStatus = 'approved';
+      }
+    }
+
+    // If not auto-verified, require manual review
+    if (!verificationMethod) {
+      verificationMethod = 'manual_review';
+      verificationData = { reason: 'Requires admin verification' };
+    }
+
+    // Create the claim
+    const claimResult = await pool.query(
+      `INSERT INTO paper_claims
+       (research_id, claimant_id, claim_status, verification_method, verification_data, claim_notes)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [researchId, userId, claimStatus, verificationMethod, JSON.stringify(verificationData), claim_notes]
+    );
+
+    const claim = claimResult.rows[0];
+
+    // If auto-approved, the database trigger will update research_items.user_id automatically
+    // But we need to manually mark it as reviewed
+    if (claimStatus === 'approved') {
+      await pool.query(
+        'UPDATE paper_claims SET reviewed_by = $1, reviewed_at = NOW() WHERE id = $2',
+        [userId, claim.id]
+      );
+    }
+
+    res.json({
+      success: true,
+      claim: {
+        id: claim.id,
+        status: claim.claim_status,
+        verification_method: claim.verification_method
+      },
+      message: claimStatus === 'approved'
+        ? 'Paper claimed successfully! You are now the owner of this paper.'
+        : 'Claim submitted for review. An administrator will review your claim shortly.'
+    });
+
+  } catch (error) {
+    console.error('Claim paper error:', error);
+    next(error);
+  }
+};
+
+/**
+ * Get user's claims
+ * GET /research/claims/my-claims
+ */
+const getMyClaims = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { status } = req.query;
+
+    let query = `
+      SELECT
+        pc.*,
+        r.title as paper_title,
+        r.doi as paper_doi,
+        r.publication_year,
+        reviewer.first_name as reviewer_first_name,
+        reviewer.last_name as reviewer_last_name
+      FROM paper_claims pc
+      JOIN research_items r ON pc.research_id = r.id
+      LEFT JOIN users reviewer ON pc.reviewed_by = reviewer.id
+      WHERE pc.claimant_id = $1
+    `;
+
+    const params = [userId];
+
+    if (status) {
+      query += ' AND pc.claim_status = $2';
+      params.push(status);
+    }
+
+    query += ' ORDER BY pc.claimed_at DESC';
+
+    const result = await pool.query(query, params);
+
+    res.json({
+      success: true,
+      claims: result.rows.map(claim => ({
+        id: claim.id,
+        research_id: claim.research_id,
+        paper_title: claim.paper_title,
+        paper_doi: claim.paper_doi,
+        publication_year: claim.publication_year,
+        claim_status: claim.claim_status,
+        verification_method: claim.verification_method,
+        verification_data: claim.verification_data,
+        claim_notes: claim.claim_notes,
+        review_notes: claim.review_notes,
+        claimed_at: claim.claimed_at,
+        reviewed_at: claim.reviewed_at,
+        reviewer: claim.reviewer_first_name ? {
+          first_name: claim.reviewer_first_name,
+          last_name: claim.reviewer_last_name
+        } : null
+      }))
+    });
+
+  } catch (error) {
+    console.error('Get my claims error:', error);
+    next(error);
+  }
+};
+
+/**
+ * Get pending claims for admin review
+ * GET /research/claims/pending
+ */
+const getPendingClaims = async (req, res, next) => {
+  try {
+    // Check if user is admin
+    if (!req.user.is_admin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const result = await pool.query(`
+      SELECT
+        pc.*,
+        r.id as paper_id,
+        r.title as paper_title,
+        r.doi as paper_doi,
+        r.authors as paper_authors,
+        r.publication_year,
+        u.id as claimant_id,
+        u.first_name as claimant_first_name,
+        u.last_name as claimant_last_name,
+        u.email as claimant_email,
+        u.orcid_id as claimant_orcid
+      FROM paper_claims pc
+      JOIN research_items r ON pc.research_id = r.id
+      JOIN users u ON pc.claimant_id = u.id
+      WHERE pc.claim_status = 'pending'
+      ORDER BY pc.claimed_at ASC
+    `);
+
+    res.json({
+      success: true,
+      claims: result.rows.map(claim => ({
+        id: claim.id,
+        research: {
+          id: claim.paper_id,
+          title: claim.paper_title,
+          doi: claim.paper_doi,
+          authors: claim.paper_authors,
+          publication_year: claim.publication_year
+        },
+        claimant: {
+          id: claim.claimant_id,
+          name: `${claim.claimant_first_name} ${claim.claimant_last_name}`,
+          email: claim.claimant_email,
+          orcid_id: claim.claimant_orcid
+        },
+        claim_notes: claim.claim_notes,
+        verification_method: claim.verification_method,
+        verification_data: claim.verification_data,
+        claimed_at: claim.claimed_at
+      }))
+    });
+
+  } catch (error) {
+    console.error('Get pending claims error:', error);
+    next(error);
+  }
+};
+
+/**
+ * Review a claim (approve or reject)
+ * PUT /research/claims/:id/review
+ */
+const reviewClaim = async (req, res, next) => {
+  try {
+    // Check if user is admin
+    if (!req.user.is_admin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { id: claimId } = req.params;
+    const { action, review_notes } = req.body;
+    const reviewerId = req.user.id;
+
+    if (!action || !['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ error: 'Action must be "approve" or "reject"' });
+    }
+
+    const newStatus = action === 'approve' ? 'approved' : 'rejected';
+
+    // Update the claim
+    // The database trigger will automatically update research_items.user_id if approved
+    const result = await pool.query(
+      `UPDATE paper_claims
+       SET claim_status = $1, reviewed_by = $2, reviewed_at = NOW(), review_notes = $3
+       WHERE id = $4
+       RETURNING *`,
+      [newStatus, reviewerId, review_notes, claimId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Claim not found' });
+    }
+
+    const claim = result.rows[0];
+
+    res.json({
+      success: true,
+      claim: {
+        id: claim.id,
+        claim_status: claim.claim_status,
+        reviewed_at: claim.reviewed_at,
+        review_notes: claim.review_notes
+      },
+      message: action === 'approve'
+        ? 'Claim approved. The researcher now owns this paper.'
+        : 'Claim rejected.'
+    });
+
+  } catch (error) {
+    console.error('Review claim error:', error);
+    next(error);
+  }
+};
+
+// ============================================================================
+// DIRECT METADATA EDITING
+// ============================================================================
+
+/**
+ * Update metadata directly (paper owners only)
+ * PUT /research/:id/metadata
+ */
+const updateMetadataDirectly = async (req, res, next) => {
+  const client = await pool.connect();
+
+  try {
+    const { id: researchId } = req.params;
+    const userId = req.user.id;
+    const {
+      framework_alignment,
+      geo_scope_text,
+      taxon_scope,
+      ecosystem_type,
+      methods,
+      threat_types,
+      conservation_actions,
+      change_reason
+    } = req.body;
+
+    // Check if user owns the paper
+    const ownerCheck = await client.query(
+      'SELECT user_id FROM research_items WHERE id = $1',
+      [researchId]
+    );
+
+    if (ownerCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Paper not found' });
+    }
+
+    if (ownerCheck.rows[0].user_id !== userId && !req.user.is_admin) {
+      return res.status(403).json({
+        error: 'Permission denied',
+        message: 'You must be the paper owner to edit metadata directly'
+      });
+    }
+
+    await client.query('BEGIN');
+
+    // Set session variable for the trigger to track who made the change
+    await client.query(`SET LOCAL app.current_user_id = '${userId}'`);
+
+    // Update compass_metadata
+    const updateResult = await client.query(
+      `UPDATE compass_metadata
+       SET
+         framework_alignment = COALESCE($1, framework_alignment),
+         geo_scope_text = COALESCE($2, geo_scope_text),
+         taxon_scope = COALESCE($3, taxon_scope),
+         ecosystem_type = COALESCE($4, ecosystem_type),
+         methods = COALESCE($5, methods),
+         threat_types = COALESCE($6, threat_types),
+         conservation_actions = COALESCE($7, conservation_actions),
+         updated_at = NOW()
+       WHERE research_id = $8
+       RETURNING *`,
+      [
+        framework_alignment ? JSON.stringify(framework_alignment) : null,
+        geo_scope_text,
+        taxon_scope ? JSON.stringify(taxon_scope) : null,
+        ecosystem_type,
+        methods ? JSON.stringify(methods) : null,
+        threat_types ? JSON.stringify(threat_types) : null,
+        conservation_actions ? JSON.stringify(conservation_actions) : null,
+        researchId
+      ]
+    );
+
+    if (updateResult.rows.length === 0) {
+      // If no metadata exists yet, create it
+      await client.query(
+        `INSERT INTO compass_metadata
+         (research_id, framework_alignment, geo_scope_text, taxon_scope, ecosystem_type,
+          methods, threat_types, conservation_actions, last_edited_by, last_edited_at, edit_count)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), 1)
+         RETURNING *`,
+        [
+          researchId,
+          JSON.stringify(framework_alignment || []),
+          geo_scope_text || '',
+          JSON.stringify(taxon_scope || []),
+          ecosystem_type || '',
+          JSON.stringify(methods || []),
+          JSON.stringify(threat_types || []),
+          JSON.stringify(conservation_actions || []),
+          userId
+        ]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    // Fetch the updated metadata
+    const finalResult = await client.query(
+      'SELECT * FROM compass_metadata WHERE research_id = $1',
+      [researchId]
+    );
+
+    res.json({
+      success: true,
+      metadata: finalResult.rows[0],
+      message: 'Metadata updated successfully'
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Update metadata error:', error);
+    next(error);
+  } finally {
+    client.release();
+  }
+};
+
+/**
+ * Get metadata change history
+ * GET /research/:id/metadata-history
+ */
+const getMetadataHistory = async (req, res, next) => {
+  try {
+    const { id: researchId } = req.params;
+
+    const result = await pool.query(`
+      SELECT
+        mh.*,
+        u.first_name,
+        u.last_name,
+        u.email
+      FROM metadata_history mh
+      JOIN users u ON mh.edited_by = u.id
+      WHERE mh.research_id = $1
+      ORDER BY mh.created_at DESC
+    `, [researchId]);
+
+    res.json({
+      success: true,
+      history: result.rows.map(row => ({
+        id: row.id,
+        edit_type: row.edit_type,
+        field_name: row.field_name,
+        old_value: row.old_value,
+        new_value: row.new_value,
+        change_reason: row.change_reason,
+        is_owner_edit: row.is_owner_edit,
+        created_at: row.created_at,
+        edited_by: {
+          first_name: row.first_name,
+          last_name: row.last_name,
+          email: row.email
+        }
+      }))
+    });
+
+  } catch (error) {
+    console.error('Get metadata history error:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   submitResearch,
   searchResearch,
@@ -1486,5 +1942,13 @@ module.exports = {
   reviewSuggestion,
   previewAISuggestions,
   generateMetadataForPaper,
-  naturalLanguageSearch
+  naturalLanguageSearch,
+  // Paper claiming
+  claimPaper,
+  getMyClaims,
+  getPendingClaims,
+  reviewClaim,
+  // Direct metadata editing
+  updateMetadataDirectly,
+  getMetadataHistory
 };
