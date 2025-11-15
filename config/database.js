@@ -1,9 +1,8 @@
 // Centralized Database Pool Configuration
 // USE THIS INSTEAD OF CREATING SEPARATE POOLS!
-import pg from 'pg';
+const pg = require('pg');
 const { Pool } = pg;
-import dotenv from 'dotenv';
-dotenv.config();
+require('dotenv').config();
 
 // Validate required environment variables
 if (!process.env.DB_USER || !process.env.DB_PASSWORD) {
@@ -33,4 +32,4 @@ pool.on('error', (err) => {
   process.exit(-1);
 });
 
-export default pool;
+module.exports = pool;
