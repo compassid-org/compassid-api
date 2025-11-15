@@ -4,19 +4,26 @@ const pg = require('pg');
 const { Pool } = pg;
 require('dotenv').config();
 
+// Support both DB_* (custom) and PG* (Railway standard) environment variables
+const dbUser = process.env.DB_USER || process.env.PGUSER;
+const dbPassword = process.env.DB_PASSWORD || process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD;
+const dbHost = process.env.DB_HOST || process.env.PGHOST || 'localhost';
+const dbPort = process.env.DB_PORT || process.env.PGPORT || 5432;
+const dbName = process.env.DB_NAME || process.env.PGDATABASE || 'compassid';
+
 // Validate required environment variables
-if (!process.env.DB_USER || !process.env.DB_PASSWORD) {
+if (!dbUser || !dbPassword) {
   console.error('ERROR: Database credentials not found in environment variables.');
-  console.error('Please set DB_USER and DB_PASSWORD in .env file');
+  console.error('Please set DB_USER/PGUSER and DB_PASSWORD/PGPASSWORD in environment');
   process.exit(1);
 }
 
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'compassid',
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  host: dbHost,
+  port: dbPort,
+  database: dbName,
+  user: dbUser,
+  password: dbPassword,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
