@@ -1,4 +1,4 @@
-const pool = require('../config/database.cjs');
+const pool = require('../config/database.js');
 
 // Save a paper
 const savePaper = async (req, res) => {

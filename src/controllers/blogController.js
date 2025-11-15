@@ -1,4 +1,4 @@
-const pool = require('../config/database.cjs');
+const pool = require('../config/database.js');
 
 const getAllPosts = async (req, res, next) => {
   try {

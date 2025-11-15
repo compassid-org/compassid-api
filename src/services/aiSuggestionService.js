@@ -1,4 +1,4 @@
-const pool = require('../config/database.cjs');
+const pool = require('../config/database.js');
 
 const FRAMEWORK_KEYWORDS = {
   'SDG-14': ['ocean', 'marine', 'sea', 'coastal', 'fish', 'reef', 'aquatic'],

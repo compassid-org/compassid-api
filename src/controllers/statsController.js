@@ -1,4 +1,4 @@
-const pool = require('../config/database.cjs');
+const pool = require('../config/database.js');
 
 const getStats = async (req, res, next) => {
   try {

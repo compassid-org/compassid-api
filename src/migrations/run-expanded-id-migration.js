@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const pool = require('../config/database.cjs');
+const pool = require('../config/database.js');
 
 async function runExpandedIdMigration() {
   const client = await pool.connect();

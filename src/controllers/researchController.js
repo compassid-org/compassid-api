@@ -1,4 +1,4 @@
-const pool = require('../config/database.cjs');
+const pool = require('../config/database.js');
 const { generateAISuggestions, saveAISuggestions, generatePreviewSuggestions } = require('../services/aiSuggestionService');
 const { extractComprehensiveMetadata } = require('../../services/claudeService');
 const { cleanAbstract, stripJatsXml } = require('../utils/textCleaning');

@@ -1,6 +1,6 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const pool = require('../config/database.cjs');
+const pool = require('../config/database.js');
 
 // Get notifications for current user
 export const getNotifications = async (req, res) => {

@@ -74,7 +74,7 @@
  * - Functions: get_effective_usage_limits(), deduct_credits_from_user()
  */
 
-const pool = require('../../config/database.cjs');
+const pool = require('../../config/database.js');
 
 // =============================================================================
 // CONFIGURATION CONSTANTS

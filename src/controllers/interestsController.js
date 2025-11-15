@@ -1,4 +1,4 @@
-import pool from '../config/database.cjs';
+import pool from '../config/database.js';
 // Logging is optional - comment out if winston isn't installed
 // import { createRequire } from 'module';
 // const require = createRequire(import.meta.url);
