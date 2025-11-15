@@ -124,7 +124,7 @@ app.use('/api/events', eventsRoutes);
 app.use('/', sitemapRoutes);
 
 // Serve static files from frontend build (in production)
-const frontendDistPath = path.join(__dirname, '../../compassid-frontend/dist');
+const frontendDistPath = path.join(__dirname, '../frontend-dist');
 const fs = require('fs');
 const frontendExists = fs.existsSync(frontendDistPath);
 

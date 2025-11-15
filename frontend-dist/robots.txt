@@ -1,0 +1,72 @@
+# COMPASSID Robots.txt
+# Allow search engines to crawl research papers and public profiles
+# Disallow private/user-specific pages
+
+User-agent: *
+
+# Allow public pages
+Allow: /
+Allow: /about
+Allow: /team
+Allow: /how-it-works
+Allow: /why-compass-id
+Allow: /search
+Allow: /research/
+Allow: /profile/
+Allow: /map
+Allow: /geographic-explorer
+Allow: /frameworks
+Allow: /frameworks/
+Allow: /analytics
+Allow: /grants
+Allow: /jobs
+Allow: /blog
+Allow: /blog/
+Allow: /news
+Allow: /groups
+Allow: /groups/
+Allow: /community
+Allow: /events
+Allow: /api-docs
+Allow: /support
+Allow: /premium
+Allow: /featured
+
+# Disallow private/authenticated pages
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /add-research
+Disallow: /submit
+Disallow: /login
+Disallow: /register
+Disallow: /messages
+Disallow: /messages/
+Disallow: /notifications
+Disallow: /notifications/
+Disallow: /settings
+Disallow: /ai-assistant
+Disallow: /ai-writing
+Disallow: /ai-writing/
+Disallow: /admin
+Disallow: /admin/
+
+# Sitemap location
+Sitemap: https://compassid.org/sitemap.xml
+
+# Crawl delay (polite to servers)
+Crawl-delay: 1
+
+# Google Scholar specific settings
+User-agent: Googlebot-Scholar
+Allow: /research/
+Allow: /profile/
+Crawl-delay: 0
+
+# Other scholarly crawlers
+User-agent: CiteSeerX
+Allow: /research/
+Crawl-delay: 1
+
+User-agent: Microsoft Academic
+Allow: /research/
+Crawl-delay: 1
