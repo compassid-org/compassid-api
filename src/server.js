@@ -125,11 +125,21 @@ app.use('/', sitemapRoutes);
 
 // Serve static files from frontend build (in production)
 const frontendDistPath = path.join(__dirname, '../../compassid-frontend/dist');
-app.use(express.static(frontendDistPath));
+const fs = require('fs');
+const frontendExists = fs.existsSync(frontendDistPath);
+
+if (frontendExists) {
+  app.use(express.static(frontendDistPath));
+  logger.info('Frontend build found - serving static files');
+} else {
+  logger.warn('Frontend build not found - API-only mode');
+}
 
 // SEO middleware: Inject meta tags for research papers and profiles
 // This MUST come before the catch-all SPA route
-app.get(['/research/:slug', '/profile/:compassId'], injectMetaTags);
+if (frontendExists) {
+  app.get(['/research/:slug', '/profile/:compassId'], injectMetaTags);
+}
 
 // SPA fallback: Serve index.html for all other routes (client-side routing)
 // This handles all routes not matched by API endpoints or SEO routes
@@ -139,11 +149,30 @@ app.get('*', (req, res) => {
     return res.status(404).json({ error: 'API endpoint not found' });
   }
 
+  // If frontend doesn't exist, show API info instead
+  if (!frontendExists) {
+    return res.json({
+      name: 'COMPASS ID API',
+      version: '1.0.0',
+      status: 'operational',
+      mode: 'API-only (frontend deployed separately)',
+      endpoints: {
+        health: '/health',
+        research: '/api/research/search',
+        stats: '/api/stats',
+        sitemap: '/sitemap.xml'
+      }
+    });
+  }
+
   const indexPath = path.join(frontendDistPath, 'index.html');
   res.sendFile(indexPath, (err) => {
     if (err) {
       logger.error('Error serving index.html:', err);
-      res.status(500).send('Frontend build not found. Please run build first.');
+      res.status(500).json({
+        error: 'Error serving frontend',
+        message: 'Frontend build exists but could not be served'
+      });
     }
   });
 });
