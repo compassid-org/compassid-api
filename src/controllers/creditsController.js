@@ -1,5 +1,5 @@
-import Stripe from 'stripe';
-import pg from 'pg';
+const Stripe = require('stripe').default;
+const pg = require('pg');
 
 const { Pool } = pg;
 const pool = new Pool({
@@ -26,7 +26,7 @@ const getStripe = () => {
  * GET /api/credits/packs
  * Get available credit packs from database
  */
-export const getCreditPacks = async (req, res) => {
+const getCreditPacks = async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT
@@ -68,7 +68,7 @@ export const getCreditPacks = async (req, res) => {
  * POST /api/credits/purchase
  * Create a Stripe Checkout Session for one-time credit purchase
  */
-export const createCreditPurchaseSession = async (req, res) => {
+const createCreditPurchaseSession = async (req, res) => {
   try {
     const { packSize } = req.body;
     const userId = req.user.userId; // From auth middleware
@@ -210,7 +210,7 @@ export const createCreditPurchaseSession = async (req, res) => {
  * POST /api/credits/webhook
  * Webhook handler for Stripe credit purchase events
  */
-export const handleCreditPurchaseWebhook = async (req, res) => {
+const handleCreditPurchaseWebhook = async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -342,7 +342,7 @@ async function handleCreditPurchaseCompleted(session) {
  * GET /api/credits/balance
  * Get user's current credit balance and usage limits
  */
-export const getCreditBalance = async (req, res) => {
+const getCreditBalance = async (req, res) => {
   try {
     const userId = req.user.userId;
 
@@ -436,7 +436,7 @@ export const getCreditBalance = async (req, res) => {
  * GET /api/credits/usage-summary
  * Get summary of user's usage across all AI features
  */
-export const getUsageSummary = async (req, res) => {
+const getUsageSummary = async (req, res) => {
   try {
     const userId = req.user.userId;
 
@@ -536,4 +536,12 @@ export const getUsageSummary = async (req, res) => {
       message: error.message
     });
   }
+};
+
+module.exports = {
+  getCreditPacks,
+  createCreditPurchaseSession,
+  handleCreditPurchaseWebhook,
+  getCreditBalance,
+  getUsageSummary
 };

@@ -1,6 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk';
-import pool from '../../config/database.js';
-import { analyzeResearchGaps, synthesizeConservationStrategy, identifyTrendingDiscoveries } from '../../services/aiInsightsService.js';
+const Anthropic = require('@anthropic-ai/sdk').default;
+const pool = require('../../config/database.cjs');
+const { analyzeResearchGaps, synthesizeConservationStrategy, identifyTrendingDiscoveries } = require('../../services/aiInsightsService.cjs');
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
@@ -16,7 +16,7 @@ const geocodeCache = new Map();
  * @query {string} week_start - Optional: ISO date for specific week
  * @query {string} region - Optional: Filter by region
  */
-export async function getWeeklyTrends(req, res) {
+async function getWeeklyTrends(req, res) {
   try {
     const { week_start, region } = req.query;
 
@@ -86,7 +86,7 @@ export async function getWeeklyTrends(req, res) {
  * @query {number} limit - Optional: Limit results (default: 50)
  * @query {number} offset - Optional: Offset for pagination (default: 0)
  */
-export async function getAnalyzedPapers(req, res) {
+async function getAnalyzedPapers(req, res) {
   try {
     const {
       week_number,
@@ -232,7 +232,7 @@ export async function getAnalyzedPapers(req, res) {
  * @query {number} limit - Optional: Number of topics per category (default: 3)
  */
 // NEW VERSION - Queries research_items + compass_metadata (the REAL 21K papers database)
-export async function getTrendingTopics(req, res) {
+async function getTrendingTopics(req, res) {
   try {
     const { limit = 20, months = 6 } = req.query;
 
@@ -437,7 +437,7 @@ export async function getTrendingTopics(req, res) {
  * Get analytics summary statistics
  * @route GET /api/analytics/summary
  */
-export async function getAnalyticsSummary(req, res) {
+async function getAnalyticsSummary(req, res) {
   try {
     // Total papers analyzed
     const totalPapersResult = await pool.query(
@@ -549,7 +549,7 @@ async function geocodeRegionWithAI(regionName) {
  * Get geographic distribution for map visualization
  * @route GET /api/analytics/map-data
  */
-export async function getMapData(req, res) {
+async function getMapData(req, res) {
   try {
     // Aggregate papers by region from analyzed_papers table
     const query = `
@@ -720,7 +720,7 @@ export async function getMapData(req, res) {
  * @route GET /api/analytics/database-stats
  * @query {string} time_range - Optional: 7d, 30d, 90d (default: all time)
  */
-export async function getDatabaseStats(req, res) {
+async function getDatabaseStats(req, res) {
   try {
     const { time_range = 'all' } = req.query;
 
@@ -909,7 +909,7 @@ export async function getDatabaseStats(req, res) {
  * @query {number} limit - Optional: Number of papers to return (default: 20)
  * @query {string} time_range - Optional: 7d, 30d, 90d (default: 30d)
  */
-export async function getLatestPapers(req, res) {
+async function getLatestPapers(req, res) {
   try {
     const { limit = 20, time_range = '30d' } = req.query;
 
@@ -990,7 +990,7 @@ export async function getLatestPapers(req, res) {
  * @query {string} time_range - Optional: 7d, 30d, 90d (default: 90d)
  * @query {number} limit - Optional: Limit for top N (default: 5)
  */
-export async function getTemporalTrends(req, res) {
+async function getTemporalTrends(req, res) {
   try {
     const { metric, time_range = '90d', limit = 5 } = req.query;
 
@@ -1109,7 +1109,7 @@ export async function getTemporalTrends(req, res) {
  * Get predictive analytics - identify emerging trends and forecast future research
  * GET /api/analytics/predictions
  */
-export async function getPredictiveAnalytics(req, res) {
+async function getPredictiveAnalytics(req, res) {
   try {
     const { time_range = '12m' } = req.query;
 
@@ -1282,7 +1282,7 @@ export async function getPredictiveAnalytics(req, res) {
 }
 
 // Get collaboration networks and co-authorship patterns
-export async function getCollaborationNetworks(req, res) {
+async function getCollaborationNetworks(req, res) {
   try {
     const { min_papers = 3, time_range = '24m' } = req.query;
     const minPapers = parseInt(min_papers);
@@ -1490,7 +1490,7 @@ export async function getCollaborationNetworks(req, res) {
  * @query {number} days - Optional: Days to look back (default: 7)
  * @query {number} limit - Optional: Number of highlights to return (default: 8)
  */
-export async function getWeeklyHighlights(req, res) {
+async function getWeeklyHighlights(req, res) {
   try {
     const { days = 7, limit = 8 } = req.query;
 
@@ -1841,7 +1841,7 @@ export async function getWeeklyHighlights(req, res) {
  * @route GET /api/analytics/research-gaps
  * @query {boolean} premium - Whether user has premium access
  */
-export async function getResearchGaps(req, res) {
+async function getResearchGaps(req, res) {
   try {
     const { premium = 'false' } = req.query;
     const isPremium = premium === 'true';
@@ -1898,7 +1898,7 @@ export async function getResearchGaps(req, res) {
  * @body {string} query - Natural language query for strategy
  * @body {boolean} premium - Whether user has premium access
  */
-export async function synthesizeStrategy(req, res) {
+async function synthesizeStrategy(req, res) {
   try {
     const { query, premium = false } = req.body;
 
@@ -1912,7 +1912,7 @@ export async function synthesizeStrategy(req, res) {
     const isPremium = premium === true;
 
     // Use existing natural language search to find relevant papers
-    const { parseNaturalLanguageQuery } = await import('../../services/naturalLanguageSearchService.js');
+    const { parseNaturalLanguageQuery } = require('../../services/naturalLanguageSearchService.cjs');
     const parsedQuery = await parseNaturalLanguageQuery(query);
 
     // Fetch relevant papers based on parsed filters
@@ -1984,7 +1984,7 @@ export async function synthesizeStrategy(req, res) {
  * @route GET /api/analytics/trending-discoveries
  * @query {boolean} premium - Whether user has premium access
  */
-export async function getTrendingDiscoveries(req, res) {
+async function getTrendingDiscoveries(req, res) {
   try {
     const { premium = 'false' } = req.query;
     const isPremium = premium === 'true';
@@ -2056,3 +2056,19 @@ export async function getTrendingDiscoveries(req, res) {
   }
 }
 
+module.exports = {
+  getWeeklyTrends,
+  getAnalyzedPapers,
+  getTrendingTopics,
+  getAnalyticsSummary,
+  getMapData,
+  getDatabaseStats,
+  getLatestPapers,
+  getTemporalTrends,
+  getPredictiveAnalytics,
+  getCollaborationNetworks,
+  getWeeklyHighlights,
+  getResearchGaps,
+  synthesizeStrategy,
+  getTrendingDiscoveries
+};

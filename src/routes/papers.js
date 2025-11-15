@@ -1,7 +1,5 @@
-import express from 'express';
-import * as papersController from '../controllers/papersController.js';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
+const express = require('express');
+const papersController = require('../controllers/papersController.js');
 const { authenticateToken } = require('../middleware/auth.cjs');
 
 const router = express.Router();
@@ -17,4 +15,4 @@ router.post('/save', authenticateToken, papersController.savePaper);
 router.get('/saved', authenticateToken, papersController.getSavedPapers);
 router.delete('/:id', authenticateToken, papersController.unsavePaper);
 
-export default router;
+module.exports = router;

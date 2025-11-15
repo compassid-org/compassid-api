@@ -1,9 +1,7 @@
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
 const pool = require('../config/database.cjs');
 
 // Save a paper
-export const savePaper = async (req, res) => {
+const savePaper = async (req, res) => {
   const {
     paper_title,
     paper_doi,
@@ -53,7 +51,7 @@ export const savePaper = async (req, res) => {
 };
 
 // Unsave a paper
-export const unsavePaper = async (req, res) => {
+const unsavePaper = async (req, res) => {
   const { id } = req.params;
   const user_id = req.user.id;
 
@@ -84,7 +82,7 @@ export const unsavePaper = async (req, res) => {
 };
 
 // Get saved papers
-export const getSavedPapers = async (req, res) => {
+const getSavedPapers = async (req, res) => {
   const user_id = req.user.id;
 
   try {
@@ -115,7 +113,7 @@ export const getSavedPapers = async (req, res) => {
 };
 
 // Create a folder
-export const createFolder = async (req, res) => {
+const createFolder = async (req, res) => {
   const { name, description, color } = req.body;
   const user_id = req.user.id;
 
@@ -147,7 +145,7 @@ export const createFolder = async (req, res) => {
 };
 
 // Get folders
-export const getFolders = async (req, res) => {
+const getFolders = async (req, res) => {
   const user_id = req.user.id;
 
   try {
@@ -176,7 +174,7 @@ export const getFolders = async (req, res) => {
 };
 
 // Add paper to folder
-export const addPaperToFolder = async (req, res) => {
+const addPaperToFolder = async (req, res) => {
   const { id: folder_id } = req.params;
   const { paper_id } = req.body;
   const user_id = req.user.id;
@@ -230,7 +228,7 @@ export const addPaperToFolder = async (req, res) => {
 };
 
 // Remove paper from folder
-export const removePaperFromFolder = async (req, res) => {
+const removePaperFromFolder = async (req, res) => {
   const { id: folder_id, paper_id } = req.params;
   const user_id = req.user.id;
 
@@ -264,4 +262,14 @@ export const removePaperFromFolder = async (req, res) => {
       message: 'Failed to remove paper from folder'
     });
   }
+};
+
+module.exports = {
+  savePaper,
+  unsavePaper,
+  getSavedPapers,
+  createFolder,
+  getFolders,
+  addPaperToFolder,
+  removePaperFromFolder
 };

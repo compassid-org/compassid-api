@@ -74,7 +74,7 @@
  * - Functions: get_effective_usage_limits(), deduct_credits_from_user()
  */
 
-import pool from '../../config/database.js';
+const pool = require('../../config/database.cjs');
 
 // =============================================================================
 // CONFIGURATION CONSTANTS
@@ -781,11 +781,11 @@ class UsageLimitMiddleware {
 // EXPORTS
 // =============================================================================
 
-export default UsageLimitMiddleware;
+module.exports = UsageLimitMiddleware;
 
 // Named exports for convenience
-export const checkUsageLimit = UsageLimitMiddleware.checkUsageLimit.bind(UsageLimitMiddleware);
-export const getUsageStatus = UsageLimitMiddleware.getUsageStatus.bind(UsageLimitMiddleware);
-export const attachUsageStatus = UsageLimitMiddleware.attachUsageStatus.bind(UsageLimitMiddleware);
-export const logUsage = UsageLimitMiddleware.logUsage.bind(UsageLimitMiddleware);
-export const resetMonthlyLimits = UsageLimitMiddleware.resetMonthlyLimits.bind(UsageLimitMiddleware);
+module.exports.checkUsageLimit = UsageLimitMiddleware.checkUsageLimit.bind(UsageLimitMiddleware);
+module.exports.getUsageStatus = UsageLimitMiddleware.getUsageStatus.bind(UsageLimitMiddleware);
+module.exports.attachUsageStatus = UsageLimitMiddleware.attachUsageStatus.bind(UsageLimitMiddleware);
+module.exports.logUsage = UsageLimitMiddleware.logUsage.bind(UsageLimitMiddleware);
+module.exports.resetMonthlyLimits = UsageLimitMiddleware.resetMonthlyLimits.bind(UsageLimitMiddleware);

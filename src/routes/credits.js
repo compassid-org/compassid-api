@@ -1,6 +1,6 @@
-import express from 'express';
-import * as creditsController from '../controllers/creditsController.js';
-import { authenticateToken } from '../middleware/auth.cjs';
+const express = require('express');
+const creditsController = require('../controllers/creditsController.js');
+const { authenticateToken } = require('../middleware/auth.cjs');
 
 const router = express.Router();
 
@@ -20,4 +20,4 @@ router.get('/usage-summary', authenticateToken, creditsController.getUsageSummar
 // NOTE: This must use raw body, not JSON parsed body
 router.post('/webhook', express.raw({ type: 'application/json' }), creditsController.handleCreditPurchaseWebhook);
 
-export default router;
+module.exports = router;

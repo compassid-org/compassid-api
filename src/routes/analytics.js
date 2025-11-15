@@ -1,7 +1,7 @@
-import express from 'express';
-import * as analyticsController from '../controllers/analyticsController.js';
-import { authenticateToken } from '../middleware/auth.cjs';
-import UsageLimitMiddleware from '../middleware/usageLimit.js';
+const express = require('express');
+const analyticsController = require('../controllers/analyticsController.js');
+const { authenticateToken } = require('../middleware/auth.cjs');
+const UsageLimitMiddleware = require('../middleware/usageLimit.js');
 
 const router = express.Router();
 
@@ -49,4 +49,4 @@ router.get('/collaborations', analyticsController.getCollaborationNetworks);
 // Get weekly highlights - compelling papers from last 7 days
 router.get('/weekly-highlights', analyticsController.getWeeklyHighlights);
 
-export default router;
+module.exports = router;
