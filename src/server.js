@@ -74,9 +74,8 @@ const allowedOrigins = process.env.CORS_ORIGINS ?
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Reject requests with no origin (null) for security
-    // Only allow requests from whitelisted origins
-    if (allowedOrigins.includes(origin)) {
+    // Allow requests with no origin (direct browser access, health checks, etc.)
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
