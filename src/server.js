@@ -29,6 +29,9 @@ const errorHandler = require('./middleware/errorHandler');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy - required for Railway deployment (behind reverse proxy)
+app.set('trust proxy', 1);
+
 // Rate limiting with different limits for different endpoints
 const generalLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
