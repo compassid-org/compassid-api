@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const pool = require('../config/database.js');
+const pool = require('../../config/database.js');
 const logger = require('../config/logger.cjs');
 
 const COOKIE_OPTIONS = {

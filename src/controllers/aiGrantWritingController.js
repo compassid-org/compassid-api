@@ -1,4 +1,4 @@
-const pool = require('../config/database.js');
+const pool = require('../../config/database.js');
 
 // Initialize OpenAI client only if API key is provided
 let openai = null;

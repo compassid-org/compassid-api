@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const pool = require('../config/database.js');
+const pool = require('../../config/database.js');
 
 async function runCompassIdMigration() {
   const client = await pool.connect();
