@@ -129,8 +129,24 @@ const fs = require('fs');
 const frontendExists = fs.existsSync(frontendDistPath);
 
 if (frontendExists) {
-  app.use(express.static(frontendDistPath));
-  logger.info('Frontend build found - serving static files');
+  // Enhanced static file serving with error logging
+  app.use((req, res, next) => {
+    express.static(frontendDistPath)(req, res, (err) => {
+      if (err) {
+        logger.error('Static file serving error:', {
+          path: req.path,
+          error: err.message,
+          stack: err.stack,
+          frontendDistPath,
+          fileExists: fs.existsSync(path.join(frontendDistPath, req.path))
+        });
+        return next(err);
+      }
+      next();
+    });
+  });
+  logger.info('Frontend build found - serving static files from:', frontendDistPath);
+  logger.info('Frontend files:', fs.readdirSync(frontendDistPath));
 } else {
   logger.warn('Frontend build not found - API-only mode');
 }
