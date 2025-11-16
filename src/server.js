@@ -129,25 +129,16 @@ const fs = require('fs');
 const frontendExists = fs.existsSync(frontendDistPath);
 
 if (frontendExists) {
-  // Create static middleware once (not per request)
-  const staticMiddleware = express.static(frontendDistPath);
-
-  // Wrap with error logging
-  app.use((req, res, next) => {
-    staticMiddleware(req, res, (err) => {
-      if (err) {
-        logger.error('Static file serving error:', {
-          path: req.path,
-          error: err.message,
-          stack: err.stack,
-          frontendDistPath,
-          fileExists: fs.existsSync(path.join(frontendDistPath, req.path))
-        });
-        return next(err);
-      }
-      next();
-    });
-  });
+  // Serve static files with maxAge for better caching
+  app.use(express.static(frontendDistPath, {
+    maxAge: '1d',
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, path) => {
+      // Force no-transform to prevent CDN from modifying files
+      res.setHeader('Cache-Control', 'public, max-age=86400, no-transform');
+    }
+  }));
 
   logger.info('Frontend build found - serving static files from:', frontendDistPath);
   logger.info('Frontend directory contents:', fs.readdirSync(frontendDistPath));
@@ -155,7 +146,15 @@ if (frontendExists) {
   // Log assets directory if it exists
   const assetsPath = path.join(frontendDistPath, 'assets');
   if (fs.existsSync(assetsPath)) {
-    logger.info('Assets directory contents:', fs.readdirSync(assetsPath));
+    const assetFiles = fs.readdirSync(assetsPath);
+    logger.info('Assets directory contents:', assetFiles);
+
+    // Log file sizes for verification
+    assetFiles.forEach(file => {
+      const filePath = path.join(assetsPath, file);
+      const stats = fs.statSync(filePath);
+      logger.info(`Asset ${file}: ${stats.size} bytes`);
+    });
   }
 } else {
   logger.warn('Frontend build not found - API-only mode');
