@@ -129,9 +129,12 @@ const fs = require('fs');
 const frontendExists = fs.existsSync(frontendDistPath);
 
 if (frontendExists) {
-  // Enhanced static file serving with error logging
+  // Create static middleware once (not per request)
+  const staticMiddleware = express.static(frontendDistPath);
+
+  // Wrap with error logging
   app.use((req, res, next) => {
-    express.static(frontendDistPath)(req, res, (err) => {
+    staticMiddleware(req, res, (err) => {
       if (err) {
         logger.error('Static file serving error:', {
           path: req.path,
@@ -145,8 +148,15 @@ if (frontendExists) {
       next();
     });
   });
+
   logger.info('Frontend build found - serving static files from:', frontendDistPath);
-  logger.info('Frontend files:', fs.readdirSync(frontendDistPath));
+  logger.info('Frontend directory contents:', fs.readdirSync(frontendDistPath));
+
+  // Log assets directory if it exists
+  const assetsPath = path.join(frontendDistPath, 'assets');
+  if (fs.existsSync(assetsPath)) {
+    logger.info('Assets directory contents:', fs.readdirSync(assetsPath));
+  }
 } else {
   logger.warn('Frontend build not found - API-only mode');
 }
