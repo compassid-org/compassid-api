@@ -1,6 +1,6 @@
 const Anthropic = require('@anthropic-ai/sdk').default;
 const pool = require('../../config/database.js');
-const { analyzeResearchGaps, synthesizeConservationStrategy, identifyTrendingDiscoveries } = require('../../services/aiInsightsService.cjs');
+const { analyzeResearchGaps, synthesizeConservationStrategy, identifyTrendingDiscoveries } = require('../../services/aiInsightsService.js');
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
