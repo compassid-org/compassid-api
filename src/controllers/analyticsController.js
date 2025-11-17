@@ -1,6 +1,7 @@
 const Anthropic = require('@anthropic-ai/sdk').default;
 const pool = require('../../config/database.js');
-const { analyzeResearchGaps, synthesizeConservationStrategy, identifyTrendingDiscoveries } = require('../../services/aiInsightsService.js');
+// Lazy load AI functions to avoid ES6 import issues
+// const { analyzeResearchGaps, synthesizeConservationStrategy, identifyTrendingDiscoveries } = require('../../services/aiInsightsService.js');
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
